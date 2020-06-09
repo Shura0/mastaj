@@ -1,0 +1,40 @@
+[{
+        "id": 104025928332968568,
+        "visibility": "public",
+        "url": "https://mastodon.wrk.ru/@shura/104025928305668182",
+        "mentions": [
+                "@shura@mastodon.wrk.ru", "@shura@mastodon.social"
+        ],
+        "text": "@shura:\n@shura давай снова"
+    }, {
+        "id": 104026135428258410,
+        "visibility": "public",
+        "url": "https://mastodon.wrk.ru/@shura/104026135376148706",
+        "mentions": [
+                "@shura@mastodon.wrk.ru", "@shura@mastodon.social"
+        ],
+        "text": "@shura:\n@shura починилось?"
+    }, {
+        "id": 104026396269822713,
+        "visibility": "public",
+        "url": "https://mastodon.wrk.ru/@shura/104026396242645081",
+        "mentions": [
+                "@shura@mastodon.wrk.ru", "@shura@mastodon.social"
+        ],
+        "text": "@shura:\n@shura почти"
+    }, {
+        "id": 104026453164367219,
+        "visibility": "public",
+        "url": "https://mastodon.social/@shura/104026453164367219",
+        "mentions": [],
+        "text": "@zloygik@mastodon.ml favourited your status:\n\n@inhosin я их постоянно использую и при покупке нового ноута у меня даже вопроса не возникало что ставить. Только кеды."
+    }, {
+        "id": 104026824633561972,
+        "visibility": "unlisted",
+        "url": "https://mastodon.ml/@inhosin/104026824588184200",
+        "mentions": [
+                "@inhosin@mastodon.ml", "@shura@mastodon.social"
+        ],
+        "text": "@inhosin:\n@shura огонь даже"
+    }
+]

@@ -1,0 +1,51 @@
+[{
+        "id": "103572152145335292",
+        "mentions": [
+                "@armitage@quey.org"
+        ],
+        "url": "https://pixelfed.social/p/armitage/128466590692937728",
+        "text": "@armitage@quey.org reblog status of @armitage@pixelfed.social:\n#black #cat #котэ at #white #winter #snow in #russia\nhttps://files.mastodon.social/media_attachments/files/024/544/255/original/149e12ff72de612c.jpeg",
+        "visibility": "public"
+    }, {
+        "id": "103572204137358872",
+        "mentions": [
+                "@drq@mastodon.ml", "@armitage@quey.org", "@rplatonov@mastodon.social"
+        ],
+        "url": "https://quey.org/@armitage/103572204119395059",
+        "text": "@armitage@quey.org:\n@rplatonov @drq это наверное для выполнения работы когда она есть и невыполнения когда её нет. Подразумевается как постоянная подработка.",
+        "visibility": "private"
+    }, {
+        "id": 104014888552797305,
+        "mentions": [
+                "@oreolek@wandering.shop"
+        ],
+        "url": "https://wandering.shop/@oreolek/104014888457684249",
+        "text": "@oreolek@wandering.shop:\nПочитал немного современной иностранной литературы. Проще говоря, выдал $1 на литжурнал.\nhttps://apparitionlit.com/issues/\nПодборка историй прям огонь. Есть рассказ про женщину, которая грустит что люди перестали охотиться за сердцами (норм). Потом история про далёкий Север и жену-медведя (прям хорошо). Клюква про транс-девушку в сибирской тайге, которая влюбляется в русского дровосека (ааа это редкая фигня). Рассказ про биохакеров (норм, но не дожали). И стишки.",
+        "visibility": "public"
+    }, {
+        "id": 104025928332968568,
+        "mentions": [
+                "@shura@mastodon.wrk.ru", "@shura@mastodon.social"
+        ],
+        "url": "https://mastodon.wrk.ru/@shura/104025928305668182",
+        "text": "@shura@mastodon.wrk.ru:\n@shura давай снова",
+        "visibility": "public"
+    }, {
+        "id": "103572152145335292",
+        "mentions": [
+                "@armitage@pixelfed.social"
+        ],
+        "url": "https://pixelfed.social/p/armitage/128466590692937728",
+        "text": "@armitage@pixelfed.social:#black #cat #котэ at #white #winter #snow in #russia\nhttps://files.mastodon.social/media_attachments/files/024/544/255/original/149e12ff72de612c.jpeg",
+        "visibility": "public"
+    }, {
+        "id": 104081059430726627,
+        "mentions": [
+            "@shura@juick.com"
+        ],
+        "visibility": "public",
+        "url": "https://juick.com/m/2968734",
+        "text": "@shura@juick.com:\nЯ до конца не уверен, но кажется произошло что-то нехорошее. #work \nhttps://files.mastodon.social/media_attachments/files/028/071/431/original/535660131e367065.png"
+    }
+
+]
