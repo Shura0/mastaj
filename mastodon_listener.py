@@ -12,6 +12,14 @@ import db
 # import numpy as np
 import json
 import html_parser
+import config
+
+LOG_FILE=config.LOG_FILE
+
+def log(text:str):
+    if config.LOGGING:
+        with open(LOG_FILE, 'a') as f:
+            f.write(text+'\n')
 
 class NotFoundError(MastodonNotFoundError):
     pass
@@ -71,6 +79,8 @@ class MastodonListener(StreamListener):
         data=status
         m = EncodedMessage()
         m.id=data['id']
+        log("Update")
+        log(str(status))
         # m['mentions'] = set()
         if data.get('reblog'):
             cont = data['reblog']
@@ -129,7 +139,8 @@ class MastodonListener(StreamListener):
         parser = html_parser.MyHTMLParser()
         m=EncodedMessage()
         print("process_notification")
-        # print(data)
+        log("Notification")
+        log(str(status))
         m.id=data.get('id')
         m.type=data.get('type')
         to_out=''
@@ -369,6 +380,15 @@ class MastodonUser:
         try:
             res=self.mastodon.status_reblog(id)
             return self.listener.process_update(res)
+        except MastodonNotFoundError:
+            raise NotFoundError()
+    
+    def status_favourite(self, id):
+        try:
+            res=self.mastodon.status_favourite(id)
+            res=self.listener.process_update(res)
+            res.text="Favourited:\n" + res.text
+            return res
         except MastodonNotFoundError:
             raise NotFoundError()
     

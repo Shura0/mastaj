@@ -30,7 +30,7 @@ xmpp_port = config.XMPP_PORT
 xmpp_queue=Queue()
 notification_queue=Queue()
 update_queue=Queue()
-    
+
 
 def get_uniq_mids(users:list) -> dict:
     mu={}
@@ -228,6 +228,13 @@ r - reblog last message
 r1 - reblog next-to-last message
 r2 - reblog 3-rd to-last message
 and so on up to 99-th message
+
+f - favourite last message
+f1 - favourite next-to-last message
+f2 - favourite 3-rd to-last message
+and so on up to 99-th message
+
+
 w - get link to last message
 w1 - get link to next-to-last message
 and so on up to 99-th message
@@ -291,6 +298,24 @@ You cannot write new messages in this chat. To make new massage please send it t
                 mtype='chat',
                 mfrom='home@'+HOST)
             msg.send()
+    elif re.match(r'f(\d{1,2})?$', body, re.I|re.MULTILINE):
+        res=re.findall(r'^f(\d+)', body, re.I)
+        h_id=0
+        if res:
+            h_id=int(res[0])
+        print("Going to get message",h_id)
+        ms=message_store.get_messages_for_user(user['mid'])
+        if h_id >= len(ms):
+            raise mastodon_listener.NotFoundError()
+        mes_x=ms[h_id]
+        _m=mastodon.status_favourite(mes_x)
+        if _m:
+            msg = XMPP.make_message(
+                message['jid'],
+                _m.text,
+                mtype='chat',
+                mfrom='home@'+HOST)
+            msg.send()
     elif re.match(r'w(\d{1,2})?$', body, re.I|re.MULTILINE):
         res=re.findall(r'^w(\d+)', body, re.I)
         h_id=0
@@ -340,6 +365,15 @@ You cannot write new messages in this chat. To make new massage please send it t
                 msg.send()
         elif command.lower() == 'r': #reblog status
             _m=mastodon.status_reblog(message_id)
+            if _m:
+                msg = XMPP.make_message(
+                    message['jid'],
+                    _m.text,
+                    mtype='chat',
+                    mfrom='home@'+HOST)
+                msg.send()
+        elif command.lower() == 'f': #favourite status
+            _m=mastodon.status_favourite(message_id)
             if _m:
                 msg = XMPP.make_message(
                     message['jid'],
