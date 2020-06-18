@@ -444,13 +444,14 @@ def process_xmpp_thread(message):
                 mtype='chat')
             msg.send()
     elif body.upper() == 'W': # Get link
+        #TODO: change dict to EncodedMessage type
         toot=message_store.get_message_by_id(mid)
         if not toot:
             toot=mastodon.get_status(mid)
             #raise mastodon_listener.NotFoundError
         msg = XMPP.make_message(
             message['jid'],
-            toot.url,
+            toot['url'],
             mfrom=str(mid) + '@' + HOST,
             mtype='chat')
         msg.send()
