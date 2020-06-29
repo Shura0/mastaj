@@ -456,9 +456,9 @@ def process_xmpp_thread(message):
             mtype='chat')
         msg.send()
     elif body.upper() == 'RR': #Reblog first message
-        toot=message_store.get_message_by_id(mid)
-        if not toot:
-            toot=mastodon.get_status(mid)
+        # toot=message_store.get_message_by_id(mid)
+        # if not toot:
+        #     toot=mastodon.get_status(mid)
         mastodon.status_reblog(mid)
         # in some cases we do not have last message in our base. For example if we get thread by .
     # elif body.upper() == 'R': #Reblog last message
@@ -767,8 +767,6 @@ async def process_xmpp(event):
                 except TypeError:
                     print("no such user")
                     
-        except Empty:
-            pass
         except mastodon_listener.NotFoundError:
             msg = XMPP.make_message(
                 message['jid'],
@@ -776,6 +774,9 @@ async def process_xmpp(event):
                 mtype='chat',
                 mfrom=message['to'])
             msg.send()
+            
+        except Empty:
+            pass
         await asyncio.sleep(.2)
 
 if __name__ == '__main__':
