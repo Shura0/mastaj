@@ -459,7 +459,13 @@ def process_xmpp_thread(message):
         # toot=message_store.get_message_by_id(mid)
         # if not toot:
         #     toot=mastodon.get_status(mid)
-        mastodon.status_reblog(mid)
+        _m=mastodon.status_reblog(mid)
+        msg = XMPP.make_message(
+            message['jid'],
+            _m.text,
+            mtype='chat',
+            mfrom='home@'+HOST)
+        msg.send()
         # in some cases we do not have last message in our base. For example if we get thread by .
     # elif body.upper() == 'R': #Reblog last message
     #     t=message_store.get_messages_for_user_by_thread(user['mid'],mid)
