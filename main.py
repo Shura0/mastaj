@@ -90,6 +90,12 @@ async def process_update(event):
                                             mfrom='home@'+HOST,
                                             mtype='chat')
                         msg.send()
+                    #autobost processing
+                    for j in message['m'].jids:
+                        l=users_db.getAutoboostByJid(j)
+                        if _m.from_mid.lower() in l:
+                            mastodon.status_reblog(_m.id)
+                            return
                 else:
                     print("recipient is in mentions. Ignored")
                     print("from_id=",_m.from_mid)
@@ -659,7 +665,8 @@ def process_xmpp_config(message):
                 'HELP\n' +
                 '"server server.tld" - assign new mastodon instance\n' +
                 '"disable" or "d" - temporary disable notifications\n' +
-                '"enable" or "e" - enable notifications\n',
+                '"enable" or "e" - enable notifications\n' +
+                '"info" or "i" - information about account',
                 mfrom='config@' + HOST,
                 mtype='chat')
                 msg.send()
@@ -726,6 +733,45 @@ def process_xmpp_config(message):
                     mfrom='config@' + HOST,
                     mtype='chat')
                 msg.send()
+            elif re.match(r'^(autoboost|ab)(\W+|$)', body):
+                try:
+                    print('autoboost')
+                    accts=re.sub(r'(autoboost|ab)(\W+)?','',body, re.I)
+                    print(accts)
+                    l=users_db.getAutoboostByJid(message['jid'])
+                    print(l)
+                    if not accts:
+                        msg = XMPP.make_message(
+                            message['jid'],
+                            "autobust is enabled for the following accounts:\n"+
+                            "\n".join(l),
+                            mfrom='config@' + HOST,
+                            mtype='chat')
+                        msg.send()
+                        return
+                    q=re.search(r'(.+?@.+)(?:[ ,;]+)?', accts)
+                    print(q)
+                    if q:
+                        print("got mid")
+                        for a in q.groups():
+                            print(a)
+                            if a not in l:
+                                if a:
+                                    users_db.addAutoboostToJid(a,message['jid'])
+                            else:
+                                print("going to delete "+str(a))
+                                if a:
+                                    users_db.delAutoboostByJid(a,message['jid'])
+                    l=users_db.getAutoboostByJid(message['jid'])
+                    msg = XMPP.make_message(
+                        message['jid'],
+                        "autobust is enabled for the following accounts:\n"+
+                        "\n".join(l),
+                        mfrom='config@' + HOST,
+                        mtype='chat')
+                    msg.send()
+                except Exception as e:
+                    print(str(e))
                 
 
 async def process_xmpp(event):

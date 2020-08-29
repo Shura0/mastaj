@@ -34,6 +34,13 @@ class Db:
                         `token` TEXT NOT NULL,
                         `status`)''');
             self.db.commit()
+        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Autoboost'")
+        res=self.cursor.fetchall()
+        if not res:
+            self.cursor.execute('''CREATE TABLE 'Autoboost'(
+                        `jid` TEXT NOT NULL,
+                        `mid` TEXT NOT NULL)''');
+            self.db.commit()
 
     def get_user_by_jid(self,jid):
         self.cursor.execute('SELECT * FROM "Users" WHERE jid = (?)', [jid])
@@ -128,7 +135,11 @@ class Db:
     def getAutoboostByJid(self, jid):
         jid=jid.lower()
         self.cursor.execute("SELECT * FROM 'Autoboost' WHERE jid = (?)",[jid])
-        return self.cursor.fetchall()
+        a=self.cursor.fetchall()
+        b=[]
+        for i in a:
+            b.append(i['mid'])
+        return b
 
     def getAutoboostByJidMid(self, jid,mid):
         mid=mid.lower()
