@@ -67,6 +67,22 @@ async def process_update(event):
                     mentions=set(mentions_str.split(' '))
                     if message['mid'] in mentions:
                         answer_to_known_message=1
+            else:
+                #autobost processing
+                try:
+                    print("autoboost processing")
+                    for j in message['m'].jids:
+                        print("for "+str(j))
+                        l=users_db.getAutoboostByJid(j)
+                        print("autoboost names:\n"+str(l))
+                        print("post from "+str(_m.from_mid))
+                        if _m.from_mid.lower() in l:
+                            print("got reblog")
+                            mastodon=mastodon_listeners.get(message['mid'])
+                            if mastodon:
+                                mastodon.status_reblog(_m.id)
+                except Exception as e:
+                    print(str(e))
             if answer_to_known_message:
                 for j in message['m'].jids:
                     msg = XMPP.make_message(j,
@@ -90,12 +106,6 @@ async def process_update(event):
                                             mfrom='home@'+HOST,
                                             mtype='chat')
                         msg.send()
-                    #autobost processing
-                    for j in message['m'].jids:
-                        l=users_db.getAutoboostByJid(j)
-                        if _m.from_mid.lower() in l:
-                            mastodon.status_reblog(_m.id)
-                            return
                 else:
                     print("recipient is in mentions. Ignored")
                     print("from_id=",_m.from_mid)
