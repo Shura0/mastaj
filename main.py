@@ -463,14 +463,20 @@ def process_xmpp_thread(message):
         #TODO: change dict to EncodedMessage type
         toot=message_store.get_message_by_id(mid)
         if not toot:
+            print("no toot in message store. Getting from mastodon...")
             toot=mastodon.get_status(mid)
-            #raise mastodon_listener.NotFoundError
-        msg = XMPP.make_message(
-            message['jid'],
-            toot['url'],
-            mfrom=str(mid) + '@' + HOST,
-            mtype='chat')
-        msg.send()
+            if not toot:
+                raise mastodon_listener.NotFoundError
+        try:
+            msg = XMPP.make_message(
+                message['jid'],
+                toot.url,
+                mfrom=str(mid) + '@' + HOST,
+                mtype='chat')
+            msg.send()
+        except:
+            e = sys.exc_info()[0]
+            print(str(e))
     elif body.upper() == 'RR': #Reblog first message
         # toot=message_store.get_message_by_id(mid)
         # if not toot:
