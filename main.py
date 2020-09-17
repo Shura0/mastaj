@@ -468,7 +468,15 @@ def process_xmpp_thread(message):
             if not toot:
                 raise mastodon_listener.NotFoundError
         try:
-            msg = XMPP.make_message(
+            print(type(toot))
+            if type(toot)==dict:
+                msg = XMPP.make_message(
+                    message['jid'],
+                    toot['url'],
+                    mfrom=str(mid) + '@' + HOST,
+                    mtype='chat')
+            else:
+                msg = XMPP.make_message(
                 message['jid'],
                 toot.url,
                 mfrom=str(mid) + '@' + HOST,
@@ -477,6 +485,12 @@ def process_xmpp_thread(message):
         except:
             e = sys.exc_info()[0]
             print(str(e))
+            msg = XMPP.make_message(
+                message['jid'],
+                "Internal error. Sorry. :-(",
+                mfrom=str(mid) + '@' + HOST,
+                mtype='chat')
+            msg.send()
     elif body.upper() == 'RR': #Reblog first message
         # toot=message_store.get_message_by_id(mid)
         # if not toot:
