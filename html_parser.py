@@ -15,12 +15,14 @@ class MyHTMLParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         if self.OFF: return
+        # print("handle_starttag "+ tag)
         link = ''
         if tag == "a":
             for i in attrs:
                 if i[0] == 'href': link = i[1]
             # import ipdb; ipdb.set_trace()
             self.inside_link=link
+            self.link=link
             self.link_text=''
             flag = 0
             for attr in attrs:
@@ -39,17 +41,19 @@ class MyHTMLParser(HTMLParser):
                 if attr[0] == 'id' and attr[1] == 'toolbar':
                     self.OFF = 1
                     break
-
     def handle_endtag(self, tag):
+
+        # print('handle_endtag '+ tag)
         if tag == 'a':
             if self.link_text:
                 self.OUT+= self.link_text
-                # print(self.link_text)
+                #print(self.link_text)
                 self.link_text=''
                 self.mention=0
-            else:
-                self.OUT += self.inside_link
+            elif self.link_text == None:
+                self.OUT += self.link
             self.inside_link=0
+            self.link=''
             return
         if tag == 'p' and self.OFF:
             self.OFF = 0
@@ -59,24 +63,29 @@ class MyHTMLParser(HTMLParser):
             self.OUT += " "
 
     def handle_data(self, data):
-        if self.OFF:
+        try:
+            # print('handle data '+ data)
+            if self.OFF:
+                return
+            data=re.sub(r'\n|\t','',data)
+            if self.inside_link:
+                #print('inside_link:'+data + ' link_text:'+self.link_text)
+                if data.startswith('#') or \
+                data.startswith('@') or \
+                self.link_text.startswith('#') or \
+                self.link_text.startswith('@') or \
+                self.mention or \
+                self.last_char == '#' or \
+                self.last_char == '@':
+                    self.link_text += data
+                else:
+                    self.link_text = None
+                return    
+            if data:
+                self.OUT += data
+                self.last_char=data[-1]
+        except AttributeError:
             return
-        data=re.sub(r'\n|\t','',data)
-        if self.inside_link:
-            if data.startswith('#') or \
-            data.startswith('@') or \
-            self.link_text.startswith('#') or \
-            self.link_text.startswith('@') or \
-            self.mention or \
-            self.last_char == '#' or \
-            self.last_char == '@':
-                self.link_text += data
-            #else:
-             #   self.OUT += self.inside_link
-            return    
-        if data:
-            self.OUT += data
-            self.last_char=data[-1]
 
     def get_result(self):
         _a = self.OUT
