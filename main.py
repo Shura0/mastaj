@@ -876,7 +876,7 @@ if __name__ == '__main__':
     XMPP.add_event_handler('session_start', process_update)
     XMPP.add_event_handler('session_start', process_notification)
     XMPP.add_event_handler('session_start', process_xmpp)
-    xmpp.register_plugin('xep_0030') # Service Discovery
+    XMPP.register_plugin('xep_0030') # Service Discovery
     XMPP.register_plugin('xep_0065', {
         'auto_accept': True
     }) # SOCKS5 Bytestreams
