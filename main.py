@@ -422,7 +422,7 @@ def process_xmpp_new(message):
         return
     body=message['body']
     try:
-        new_toot=mastodon.status_post(
+        mastodon.status_post(
             status=body,
             visibility='public'
         )
@@ -876,6 +876,11 @@ if __name__ == '__main__':
     XMPP.add_event_handler('session_start', process_update)
     XMPP.add_event_handler('session_start', process_notification)
     XMPP.add_event_handler('session_start', process_xmpp)
+    xmpp.register_plugin('xep_0030') # Service Discovery
+    XMPP.register_plugin('xep_0065', {
+        'auto_accept': True
+    }) # SOCKS5 Bytestreams
+
     
     XMPP.connect()
     loop.run_until_complete(XMPP.connected_event.wait())

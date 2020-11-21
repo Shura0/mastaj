@@ -260,7 +260,6 @@ https://zenrus.ru/'''
         text=p.get_result()
         # print(text)
         self.assertEqual(text, sample_text)
-
         
 
 
