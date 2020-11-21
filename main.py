@@ -365,7 +365,7 @@ You cannot write new messages in this chat. To make new massage please send it t
         print('Original post was:')
         original_post.rstrip()
         print(original_post)
-        toot=message_store.find_message(original_post)
+        toot=message_store.find_message(original_post, user['mid'])
         if not toot:
             raise mastodon_listener.NotFoundError()
         message_id=toot['id']

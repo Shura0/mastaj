@@ -155,7 +155,7 @@ class TestAll(unittest.TestCase):
         
         search_for='''@inhosin@mastodon.ml:
 Захотелось прочитать книгу по Linux. А то юзаю как чайник.'''
-        toot=message_store.find_message(search_for)
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
         # print(toot)
         self.assertEqual(toot['id'],'104032564439980906')
         search_for='''@sptnkmmnt@mastodon.ml:
@@ -165,17 +165,21 @@ class TestAll(unittest.TestCase):
 И меня мучает вопрос:
 Интересно, а как музыкантов не бесит, что вместо того, чтобы наслаждаться музыкой, текстами, там... шоу, в конце концов, народ утыкается в смарты и просто "ксерокопирует" форму без содержания?
 '''
-        toot=message_store.find_message(search_for)
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
         self.assertEqual(toot['id'],'104032809534204360')
         
         search_for='''@Vladimir_Vladimirovich:
 Судно "Академик Черский", способное достроить "Северный поток-2", которое по данным независимых СМИ шло в Находку, внезапно оказалось у берегов Дании. Наверное решили идти в Находку Северным морским путём.'''
-        toot=message_store.find_message(search_for)
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
         self.assertEqual(toot,None)
         
         search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
-        toot=message_store.find_message(search_for)
+        toot=message_store.find_message(search_for, 'L29Ah@qoto.org')
         self.assertEqual(toot['id'],'105237775817950579')
+        
+        search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
+        self.assertEqual(toot['id'],'105237775810751372')
     
     def test_xmpp_users(self):
         tmp_db=USERS_TEST_DB+'.bak'

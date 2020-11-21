@@ -64,10 +64,9 @@ class MessageStore:
         print(res)
         self.db.commit()
     
-    def find_message(self, text):
+    def find_message(self, text, mid):
         text=re.sub(r'([^"])"',r'\1""',text)
-        text='message:"'+text+'"*'
-        # print(text)
+        text='message:"'+text+'" mid:"' + str(mid) + '"'
         sql="SELECT * FROM 'Messages' WHERE Messages MATCH (?) ORDER BY 'date' DESC";
         res=self.cursor.execute(sql,[text])
         a=self.cursor.fetchall()
