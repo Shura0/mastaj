@@ -172,6 +172,10 @@ class TestAll(unittest.TestCase):
 Судно "Академик Черский", способное достроить "Северный поток-2", которое по данным независимых СМИ шло в Находку, внезапно оказалось у берегов Дании. Наверное решили идти в Находку Северным морским путём.'''
         toot=message_store.find_message(search_for)
         self.assertEqual(toot,None)
+        
+        search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
+        toot=message_store.find_message(search_for)
+        self.assertEqual(toot['id'],'105237775817950579')
     
     def test_xmpp_users(self):
         tmp_db=USERS_TEST_DB+'.bak'
@@ -198,11 +202,11 @@ class TestAll(unittest.TestCase):
         p.feed(html)
         p.close()
         text=p.get_result()
-        print("HTML parser text:'"+ text+"'")
+        # print("HTML parser text:'"+ text+"'")
         sample_text='''
 Катали с приятелем в двухдневный поход на выходных.        Наснимал немножко видео и попробовал немножко помонтировать. Прошу смотреть и оценивать.
         День первый: https://www.youtube.com/watch?v=Rma0SafnztU        #вело        #bike'''
-        print("HTML parser sample:'"+ sample_text + "'")
+        # print("HTML parser sample:'"+ sample_text + "'")
         self.assertEqual(text, sample_text)
         
         html='''<p>Сегодня снова колесил <a href="https://mastodon.host/tags/%D0%BF%D0%BE%D0%BB%D1%81%D1%82%D0%B0" class="mention hashtag
@@ -260,10 +264,6 @@ https://zenrus.ru/'''
         text=p.get_result()
         # print(text)
         self.assertEqual(text, sample_text)
-<<<<<<< HEAD
-        
-=======
-
         html='''<p>Будет что послушать, иначе Aleckat &amp; Hynamo затеру до дыр. \n<a href="https://sound.skrep.in/library/albums/4" rel="nofollow noopener noreferrer" target="_blank"></a><a href="https://sound.skrep.in/library/albums/4" rel="nofollow noopener noreferrer" target="_blank">https://sound.skrep.in/library/albums/4</a>/</p>'''
         sample_text='''
 Будет что послушать, иначе Aleckat & Hynamo затеру до дыр. https://sound.skrep.in/library/albums/4/'''
@@ -274,7 +274,6 @@ https://zenrus.ru/'''
         print("HTML parser text:'"+ text+"'")
         # print(text)
         self.assertEqual(text, sample_text)
->>>>>>> 4a87c7ac0256d8204d833bc7ccd4c49258cc00e9
 
 
 if __name__ == '__main__':

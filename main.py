@@ -876,16 +876,11 @@ if __name__ == '__main__':
     XMPP.add_event_handler('session_start', process_update)
     XMPP.add_event_handler('session_start', process_notification)
     XMPP.add_event_handler('session_start', process_xmpp)
-<<<<<<< HEAD
-    xmpp.register_plugin('xep_0030') # Service Discovery
-=======
     XMPP.register_plugin('xep_0030') # Service Discovery
->>>>>>> 4a87c7ac0256d8204d833bc7ccd4c49258cc00e9
     XMPP.register_plugin('xep_0065', {
         'auto_accept': True
     }) # SOCKS5 Bytestreams
 
-    
     XMPP.connect()
     loop.run_until_complete(XMPP.connected_event.wait())
     print("xmmp connected")
