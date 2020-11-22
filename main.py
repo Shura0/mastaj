@@ -101,10 +101,18 @@ async def process_update(event):
                         _m.id,
                         message['mid']
                     )
-                    for j in message['m'].jids:
-                        # check if user has disabled replies receiving
-                        u=users_db.get_user_by_jid(j)
-                        if u and u['receive_replies']=='1':
+                    if _m.in_reply_to_id:
+                        for j in message['m'].jids:
+                            # check if user has disabled replies receiving
+                            u=users_db.get_user_by_jid(j)
+                            if u and u['receive_replies']=='1':
+                                msg = XMPP.make_message(j,
+                                                    _m.text,
+                                                    mfrom='home@'+HOST,
+                                                    mtype='chat')
+                                msg.send()
+                    else:
+                        for j in message['m'].jids:
                             msg = XMPP.make_message(j,
                                                 _m.text,
                                                 mfrom='home@'+HOST,
@@ -177,22 +185,26 @@ async def process_notification(event):
                             mfrom=str(_m.id) + "@"+HOST)
                             msg.send()
                 else:
-                    message_store.add_message(
-                             _m.text,
-                             _m.url,
-                             _m.mentions,
-                             _m.visibility,
-                             _m.id,
-                             message['mid'],
-                             thread[0].id
-                         )
-                    for j in message['m'].jids:
-                        msg = XMPP.make_message(
-                            j,
-                            _m.text,
-                            mtype='chat',
-                            mfrom=str(_m.id) + "@"+HOST)
-                        msg.send()
+                    print("Not reply")
+                    try:
+                        message_store.add_message(
+                                 _m.text,
+                                 _m.url,
+                                 _m.mentions,
+                                 _m.visibility,
+                                 _m.id,
+                                 message['mid'],
+                                 _m.id
+                             )
+                        for j in message['m'].jids:
+                            msg = XMPP.make_message(
+                                j,
+                                _m.text,
+                                mtype='chat',
+                                mfrom=str(_m.id) + "@"+HOST)
+                            msg.send()
+                    except Exception as e:
+                        print("Error: "+ str(e))
             # elif _m.type=='favourite' or _m.type=='reblog':
             #     message_store.add_message(
             #                 _m.text,
