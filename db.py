@@ -41,6 +41,17 @@ class Db:
                         `jid` TEXT NOT NULL,
                         `mid` TEXT NOT NULL)''');
             self.db.commit()
+        # checking database version
+        self.cursor.execute("PRAGMA table_info(Users)")
+        flag=1
+        res=self.cursor.fetchall()
+        for r in res:
+            if r['name'] == 'receive_replies':
+                flag=0
+        if flag:
+            print("Old version of users base... Upgrading")
+            self.cursor.execute('ALTER TABLE Users ADD COLUMN receive_replies TEXT DEFAULT (1)')
+            res=self.db.commit()
 
     def get_user_by_jid(self,jid):
         self.cursor.execute('SELECT * FROM "Users" WHERE jid = (?)', [jid])
@@ -149,3 +160,9 @@ class Db:
         if a and a[0]: return a[0]
         return None
 
+    def set_receive_replies_by_mid(self, mid, val):
+        mid=mid.lower()
+        self.cursor.execute("UPDATE 'Users' SET `receive_replies`=(?) WHERE mid = (?)", (val, mid))
+        self.db.commit()
+        
+    

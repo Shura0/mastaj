@@ -39,6 +39,7 @@ def get_uniq_mids(users:list) -> dict:
             mu[u['mid']]={}
             mu[u['mid']]['jids']=list([u['jid']])
             mu[u['mid']]['token']=u['token']
+            mu[u['mid']]['receive_replies']=u['receive_replies']
         else:
             mu[u['mid']]['jids'].append(u['jid'])
     return mu
@@ -101,11 +102,14 @@ async def process_update(event):
                         message['mid']
                     )
                     for j in message['m'].jids:
-                        msg = XMPP.make_message(j,
-                                            _m.text,
-                                            mfrom='home@'+HOST,
-                                            mtype='chat')
-                        msg.send()
+                        # check if user has disabled replies receiving
+                        u=users_db.get_user_by_jid(j)
+                        if u and u['receive_replies']=='1':
+                            msg = XMPP.make_message(j,
+                                                _m.text,
+                                                mfrom='home@'+HOST,
+                                                mtype='chat')
+                            msg.send()
                 else:
                     print("recipient is in mentions. Ignored")
                     print("from_id=",_m.from_mid)
@@ -696,7 +700,10 @@ def process_xmpp_config(message):
                 '"server server.tld" - assign new mastodon instance\n' +
                 '"disable" or "d" - temporary disable notifications\n' +
                 '"enable" or "e" - enable notifications\n' +
-                '"info" or "i" - information about account',
+                '"replies on" - enable replies in home feed\n' +
+                '"replies off" - disable replies in home feed\n' +
+                '"autoboost <mastodon id>" or "ab <mastodon id>" - enable autoboost for <mastodon id>\n' +
+                '"info" or "i" - information about account\n',
                 mfrom='config@' + HOST,
                 mtype='chat')
                 msg.send()
@@ -802,7 +809,34 @@ def process_xmpp_config(message):
                     msg.send()
                 except Exception as e:
                     print(str(e))
-                
+            elif re.match(r'replies', body):
+                print("replies")
+                res=re.match(r'replies\W+(.*)', body, re.I)
+                message_text='Unknown command'
+                try:
+                    # print("replies "+ str(res[1]))
+                    print(str(user))
+                    if res[1] == 'on':
+                        users_db.set_receive_replies_by_mid(user['mid'],1)
+                        message_text='Now you will receive replies in home feed'
+                    elif res[1] == 'off':
+                        users_db.set_receive_replies_by_mid(user['mid'],0)
+                        message_text='Now you will NOT receive replies in home feed'
+                except Exception as e: #NoneType
+                    print("error:"+ str (e))
+                    u=users_db.get_user_by_jid(message['jid'])
+                    print(str(u))
+                    if u['receive_replies']=='1':
+                        message_text = "You receive replies in home feed"
+                    else:
+                        message_text= "You do not receive replies in home feed"                
+                msg = XMPP.make_message(
+                        message['jid'],
+                        message_text,
+                        mfrom='config@' + HOST,
+                        mtype='chat')
+                msg.send()
+                    
 
 async def process_xmpp(event):
     while 1:

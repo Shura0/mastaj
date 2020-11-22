@@ -100,13 +100,14 @@ class TestAll(unittest.TestCase):
         mu=main.get_uniq_mids(users)
         emu={
             'shura@mastodon.social': {
+                'jids': ['admin@lenovo.myhome', 'admin@home.myhome'],
                 'token': '53c6c387a730b42586042ceb69e2e6581ca4602ba406f758cf71019ff8ce9b71',
-                'jids': ['admin@lenovo.myhome', 'admin@home.myhome']},
-             'onemore@masto.test': {
+                'receive_replies': '1'},
+            'onemore@masto.test': {
+                'jids': ['user2@home.myhome'],
                 'token': '111',
-                'jids': ['user2@home.myhome']}
-             }
-        print(mu)
+                'receive_replies': '1'}
+            }
         self.assertEqual(mu,emu)
         
         database.add_user('test@jid','test@mid', '')
@@ -118,7 +119,6 @@ class TestAll(unittest.TestCase):
                 mu[u['mid']]=list([u['jid']])
             else:
                 mu[u['mid']].append(u['jid'])
-        print(mu)
         emu={
             'onemore@masto.test': ['user2@home.myhome'],
             'shura@mastodon.social': ['admin@lenovo.myhome', 'admin@home.myhome'],
@@ -126,7 +126,7 @@ class TestAll(unittest.TestCase):
             }
         self.assertEqual(mu,emu)
         user=database.get_user_by_jid('user2@home.myhome')
-        sample={'jid': 'user2@home.myhome', 'status': 'enabled', 'token': '111', 'mid': 'onemore@masto.test'}
+        sample={'jid': 'user2@home.myhome', 'status': 'enabled', 'token': '111', 'mid': 'onemore@masto.test', 'receive_replies':'1'}
         self.assertEqual(user,sample)
         user=database.get_user_by_jid('non-exist')
         self.assertEqual(user,None)
