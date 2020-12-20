@@ -51,6 +51,7 @@ def get_mentions(thread:list) -> str:
     return " ".join(mentions)
 
 async def process_update(event):
+    # TODO: Rewrite this
     while 1:
         try:
             message = update_queue.get(block=False)
