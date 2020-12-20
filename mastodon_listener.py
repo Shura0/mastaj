@@ -33,7 +33,7 @@ class NetworkError(MastodonNetworkError):
 class EncodedMessage:
     def __init__(self):
         self.id = 0
-        self.in_reply_to_id = 0
+        self.in_reply_to_id = None
         self.type = ''
         self.mentions = set()
         self.url = ''

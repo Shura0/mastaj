@@ -29,22 +29,137 @@ MASTODON_ID='shura@mastodon.social'
 USERS_TEST_DB='users_test.db'
 MESSAGES_TEST_DB='test_messages.db'
 
+update_queue=Queue()
+
+
 class TestAll(unittest.TestCase):
+    
+    def _p_update(self):
+        message_store=self.message_store
+        message = self.update_queue.get(block=False)
+        #print(message)
+        _m=message['status']
+        print("mid:",message['mid'])
+        print("mentions:", _m.mentions)
+        answer_to_known_message=0
+        if _m.in_reply_to_id:
+            # thread=message['m'].get_thread(_m.id)
+            # first_message=thread[0]
+            # stored_message=message_store.get_message_by_id(first_message.id)
+            # if stored_message:
+            #     message_store.update_mentions(first_message.id,_m.mentions)
+            #     mentions_str=stored_message['mentions']
+            #     mentions=set(mentions_str.split(' '))
+            #     if message['mid'] in mentions:
+            #         answer_to_known_message=1
+            pass
+        else:
+            #autobost processing
+            try:
+                print("autoboost processing")
+                for j in message['m'].jids:
+                    print("for "+str(j))
+                    # l=users_db.getAutoboostByJid(j)
+                    # print("autoboost names:\n"+str(l))
+                    # print("post from "+str(_m.from_mid))
+                    # if _m.from_mid.lower() in l:
+                    #     print("got reblog")
+                        # mastodon=mastodon_listeners.get(message['mid'])
+                        # if mastodon:
+                        #     mastodon.status_reblog(_m.id)
+            except Exception as e:
+                print(str(e))
+        if answer_to_known_message:
+            for j in message['m'].jids:
+                # msg = XMPP.make_message(j,
+                #                 _m.text,
+                #                 mfrom=str(first_message.id)+'@'+HOST,
+                #                 mtype='chat')
+                # msg.send()
+                pass
+        else:
+            if '@'+message['mid'] not in _m.mentions:
+                print("Before DB adding:")
+                print(message)
+                print(_m.to_dict())
+                message_store.add_message(
+                    _m.text,
+                    _m.url,
+                    _m.mentions,
+                    _m.visibility,
+                    _m.id,
+                    message['mid']
+                )
+                if _m.in_reply_to_id:
+                    for j in message['m'].jids:
+                        # check if user has disabled replies receiving
+                        # u=users_db.get_user_by_jid(j)
+                        # if u and u['receive_replies']=='1':
+                            # msg = XMPP.make_message(j,
+                            #                     _m.text,
+                            #                     mfrom='home@'+HOST,
+                            #                     mtype='chat')
+                            # msg.send()
+                        pass
+                else:
+                    for j in message['m'].jids:
+                        # msg = XMPP.make_message(j,
+                        #                     _m.text,
+                        #                     mfrom='home@'+HOST,
+                        #                     mtype='chat')
+                        # msg.send()
+                        pass
+            else:
+                print("recipient is in mentions. Ignored")
+                print("from_id=",_m.from_mid)
+                print("to:", message['mid'])
+                print("in reply to ",_m.in_reply_to_id)
+                if ( not _m.in_reply_to_id ) and _m.from_mid == message['mid']:
+                    print("Our own new message. Putting it in home chat")
+                    message_store.add_message(
+                        _m.text,
+                        _m.url,
+                        _m.mentions,
+                        _m.visibility,
+                        _m.id,
+                        message['mid']
+                    )
+                    for j in message['m'].jids:
+                        # msg = XMPP.make_message(j,
+                        #                     _m.text,
+                        #                     mfrom='home@'+HOST,
+                        #                     mtype='chat')
+                        # msg.send()
+                        pass
+                # No need to send message. We will receive a duplicate via notification
+                #pass
+    
     def test_update(self):
         """
         Test for mastodon update processing
         """
+        self.maxDiff=None
         with open(UPDATES_FILE) as f:
             data=f.read()
         f.close()
         j = json.loads(data)
         q = Queue()
+        self.update_queue=Queue()
+        tmp_db=MESSAGES_TEST_DB+'.bak'
+        copyfile(MESSAGES_TEST_DB, tmp_db)
+        self.message_store=MessageStore(tmp_db)
         m=mastodon_listener.MastodonListener(MASTODON_ID)
+        m.jids={'shura0@jabber.ru'}
         if type(j) is list:
             for i in j:
-                m.on_update(i)
+                r=m.process_update(i)
+                #self.update_queue.put(i)
+                self.update_queue.put({'mid': MASTODON_ID, 'status': r, 'm':m})
+                q.put(r)
         else:
-            m.on_update(j)
+            r=m.process_update(j)
+            self.update_queue.put({'mid': MASTODON_ID, 'status': r, 'm':m})
+            q.put(r)
 
         with open(UPDATES_RSULT_FILE) as f:
             data=f.read()
@@ -53,15 +168,23 @@ class TestAll(unittest.TestCase):
         while not q.empty():
             m=q.get()
             u=ju.pop(0)
+            # print(type(m))
             em=mastodon_listener.EncodedMessage()
             em.text=u['text']
             em.id=u['id']
             em.url=u['url']
+            em.in_reply_to_id=u.get('in_reply_to_id')
             em.visibility=u['visibility']
             em.add_mentions(u['mentions'])
             ment=em.mentions
-            em.add_mentions({'set'})
-            self.assertEqual(m['status'].to_dict(), em.to_dict())
+            self.assertEqual(m.to_dict(), em.to_dict())
+            # self._p_update()
+            # text=u['text']
+            # print("u=")
+            # print(u)
+            # res=self.message_store.find_message(text, MASTODON_ID)
+            # self.assertEqual(u['text'],res['message'])
+            
         
     def test_notification(self):
         with open(NOTIFICATIONS_FILE) as f:
@@ -275,7 +398,7 @@ https://zenrus.ru/'''
         p.feed(html)
         p.close()
         text=p.get_result()
-        print("HTML parser text:'"+ text+"'")
+        #print("HTML parser text:'"+ text+"'")
         # print(text)
         self.assertEqual(text, sample_text)
 
