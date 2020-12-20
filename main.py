@@ -93,6 +93,14 @@ async def process_update(event):
                     msg.send()
             else:
                 if '@'+message['mid'] not in _m.mentions:
+                    message_store.add_message(
+                        _m.text,
+                        _m.url,
+                        _m.mentions,
+                        _m.visibility,
+                        _m.id,
+                        message['mid']
+                    )
                     if _m.in_reply_to_id:
                         for j in message['m'].jids:
                             # check if user has disabled replies receiving
@@ -103,17 +111,6 @@ async def process_update(event):
                                                     mfrom='home@'+HOST,
                                                     mtype='chat')
                                 msg.send()
-                                try:
-                                    message_store.add_message(
-                                        _m.text,
-                                        _m.url,
-                                        _m.mentions,
-                                        _m.visibility,
-                                        _m.id,
-                                        message['mid']
-                                    )
-                                except:
-                                    pass
                     else:
                         for j in message['m'].jids:
                             msg = XMPP.make_message(j,
