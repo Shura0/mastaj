@@ -323,7 +323,7 @@ class MastodonUser:
     def start_register(self, server):
         try:
             (id,secret)=Mastodon.create_app(
-                    client_name='xmpp_gate',
+                    client_name='mastaj',
                     api_base_url="https://"+server
                 )
             m=Mastodon(
