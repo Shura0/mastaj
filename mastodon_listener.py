@@ -13,8 +13,10 @@ import db
 import json
 import html_parser
 import config
+from time import time
 
 LOG_FILE=config.LOG_FILE
+TIMEOUT=60
 
 def log(text:str):
     if config.LOGGING:
@@ -67,6 +69,7 @@ class MastodonListener(StreamListener):
     def __init__(self, mid):
         StreamListener.__init__(self)
         self.mid = mid
+        self.lastbeat=int(time())
         # self.update_q = update
         # self.message_q = message
         self.server_name=re.findall(r'([^@]+)$',self.mid)[0]
@@ -132,6 +135,7 @@ class MastodonListener(StreamListener):
             m.in_reply_to_id=cont['in_reply_to_id']
         # return m
         # self.update_q.put({'mid': self.mid, 'status': m})
+        self.lastbeat=int(time())
         return m
 
     def process_notification(self, status):
@@ -219,8 +223,9 @@ class MastodonListener(StreamListener):
 
     def handle_heartbeat(self):
         print("heartbeat from " + self.mid)
-        # self.q.put({"mid": self.mid, 'json': {'content': 'beat'}})
+        self.lastbeat=int(time())
         
+        # self.q.put({"mid": self.mid, 'json': {'content': 'beat'}})
         
 class MastodonUser:
     def __init__(self, login, access_token):
@@ -260,15 +265,18 @@ class MastodonUser:
         except:
             pass
     
-    def create_listener(self, update_queue, notification_queue):
+    def create_listener(self, update_queue=0, notification_queue=0):
         self.listener=MastodonListener(self.mastodon_id)
         self.stream=self.mastodon.stream_user(self.listener,run_async=True, reconnect_async=True)
         print ("added listener for", self.mastodon_id)
         self.listener.jids=self.jids
         self.listener.on_update=self.on_update
         self.listener.on_notification=self.on_notification
-        self.update_q=update_queue
-        self.notification_q=notification_queue
+        self.listener.lastbeat=int(time())
+        if update_queue:
+            self.update_q=update_queue
+        if notification_queue:
+            self.notification_q=notification_queue
         
     def on_update(self, status):
         print("!UPDATE to " + self.mastodon_id + ":")
@@ -368,6 +376,14 @@ class MastodonUser:
         except MastodonUnauthorizedError as e:
             print(str(e))
             return 0
+    
+    def check_timeout(self):
+        t = int(time())
+        if t - self.listener.lastbeat > TIMEOUT:
+            return 1
+        return 0
+            
+        
     
     # def auth_request_url(self):
     #     return self.mastodon.auth_request_url(

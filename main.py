@@ -28,6 +28,9 @@ xmpp_password = config.XMPP_PASSWORD
 xmpp_server = config.XMPP_SERVER
 xmpp_port = config.XMPP_PORT
 xmpp_queue=Queue()
+
+
+
 notification_queue=Queue()
 update_queue=Queue()
 
@@ -51,14 +54,16 @@ def get_mentions(thread:list) -> str:
     return " ".join(mentions)
 
 async def process_update(event):
-    # TODO: Rewrite this
     while 1:
         try:
             message = update_queue.get(block=False)
+            print("update queue is not empty")
             _m=message['status']
             print("mid:",message['mid'])
             print("mentions:", _m.mentions)
             answer_to_known_message=0
+            
+            # TODO: Rewrite this
             if _m.in_reply_to_id:
                 thread=message['m'].get_thread(_m.id)
                 first_message=thread[0]
@@ -143,8 +148,9 @@ async def process_update(event):
                     # No need to send message. We will receive a duplicate via notification
                     #pass
         except Empty:
-            pass
-        await asyncio.sleep(.2)
+            print('e', end='')
+        print('.', end='')
+        await asyncio.sleep(1)
 
 async def process_notification(event):
     while 1:
@@ -907,6 +913,16 @@ async def process_xmpp(event):
         except Empty:
             pass
         await asyncio.sleep(.2)
+        
+async def check_timeout(event):
+    while 1:
+        t=int(time())
+        for k,v in mastodon_listeners.items():
+            if v.check_timeout(): # timeout!
+                v.close_listener()
+                v.create_listener()
+        await asyncio.sleep(2)
+
 
 if __name__ == '__main__':
     XMPP=gxmpp.Component(xmpp_jid, xmpp_password, xmpp_server, xmpp_port)
