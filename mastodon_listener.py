@@ -6,7 +6,8 @@ MastodonNotFoundError, MastodonAPIError, MastodonUnauthorizedError,\
 MastodonNetworkError, MastodonIllegalArgumentError
 
 # import time
-from queue import Empty, Queue
+from queue import Empty
+from multiprocessing import Queue
 import re
 # import mq
 import db
