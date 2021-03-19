@@ -1,5 +1,6 @@
 #!/bin/env python3
 
+
 from mastodon import Mastodon, StreamListener,\
 MastodonNotFoundError, MastodonAPIError, MastodonUnauthorizedError,\
 MastodonNetworkError, MastodonIllegalArgumentError
@@ -16,7 +17,7 @@ import config
 from time import time
 
 LOG_FILE=config.LOG_FILE
-TIMEOUT=60
+TIMEOUT=30
 
 def log(text:str):
     if config.LOGGING:
@@ -70,6 +71,7 @@ class MastodonListener(StreamListener):
         StreamListener.__init__(self)
         self.mid = mid
         self.lastbeat=int(time())
+        self.got_heartbeat=0
         # self.update_q = update
         # self.message_q = message
         self.server_name=re.findall(r'([^@]+)$',self.mid)[0]
@@ -224,6 +226,7 @@ class MastodonListener(StreamListener):
     def handle_heartbeat(self):
         print("heartbeat from " + self.mid)
         self.lastbeat=int(time())
+        self.got_heartbeat=1 # chack if server sends heartbeats at all
         
         # self.q.put({"mid": self.mid, 'json': {'content': 'beat'}})
         
@@ -247,7 +250,7 @@ class MastodonUser:
 
     def close_listener(self):
         if self.stream:
-            print(type(self.stream))
+            # print(type(self.stream))
             self.stream.close()
             self.stream=None
             print("stream for "+self.mastodon_id+" closed")
@@ -379,8 +382,12 @@ class MastodonUser:
     
     def check_timeout(self):
         t = int(time())
+        if not self.listener.got_heartbeat:
+            return 0
         if t - self.listener.lastbeat > TIMEOUT:
+            print("\n" + self.mastodon_id + " timeout")
             return 1
+        
         return 0
             
         

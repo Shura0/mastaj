@@ -14,7 +14,7 @@ import re
 import gxmpp
 import json
 import db
-import time
+from time import time
 
 import config
 
@@ -929,6 +929,7 @@ if __name__ == '__main__':
     users_db = db.Db(USERS_DB)
     message_store=MessageStore(MESSAGES_DB)
     users = users_db.get_users()  # {jid, mid, token}
+    mastodon_listeners={}
     print(users)
     XMPP.add_users(users)
     XMPP.attach_queue(xmpp_queue)
@@ -939,6 +940,8 @@ if __name__ == '__main__':
     XMPP.add_event_handler('session_start', process_update)
     XMPP.add_event_handler('session_start', process_notification)
     XMPP.add_event_handler('session_start', process_xmpp)
+    XMPP.add_event_handler('session_start', check_timeout)
+    
     XMPP.register_plugin('xep_0030') # Service Discovery
     XMPP.register_plugin('xep_0065', {
         'auto_accept': True
@@ -948,7 +951,6 @@ if __name__ == '__main__':
     loop.run_until_complete(XMPP.connected_event.wait())
     print("xmmp connected")
     
-    mastodon_listeners={}
     USER_LIST=get_uniq_mids(users)
     for k,v in USER_LIST.items():
         m=MastodonUser(k, v.get('token'))
