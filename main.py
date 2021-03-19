@@ -176,6 +176,15 @@ async def process_notification(event):
                         print("not found",_m.url)
                         ok=0
                     if ok and thread:
+                        message_store.add_message(
+                            _m.text,
+                            _m.url,
+                            _m.mentions,
+                            _m.visibility,
+                            _m.id,
+                            message['mid'],
+                            thread[0].id
+                        )
                         for j in message['m'].jids:
                             msg = XMPP.make_message(
                                 j,
