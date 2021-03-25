@@ -54,6 +54,10 @@ def get_mentions(thread:list) -> str:
     return " ".join(mentions)
 
 async def process_update(event):
+    try:
+        asyncio.current_task().set_name('process_update')
+    except Exception as e:
+        print(e)
     while 1:
         try:
             message = update_queue.get(block=False)
@@ -65,10 +69,13 @@ async def process_update(event):
             
             # TODO: Rewrite this
             if _m.in_reply_to_id:
+                print("reply")
                 thread=message['m'].get_thread(_m.id)
                 first_message=thread[0]
+                print("search for message id") 
                 stored_message=message_store.get_message_by_id(first_message.id)
                 if stored_message:
+                    print("found")
                     message_store.update_mentions(first_message.id,_m.mentions)
                     mentions_str=stored_message['mentions']
                     mentions=set(mentions_str.split(' '))
@@ -91,6 +98,7 @@ async def process_update(event):
                 except Exception as e:
                     print(str(e))
             if answer_to_known_message:
+                print("answer to known message")
                 for j in message['m'].jids:
                     msg = XMPP.make_message(j,
                                     _m.text,
@@ -98,7 +106,9 @@ async def process_update(event):
                                     mtype='chat')
                     msg.send()
             else:
+                print("unknown message")
                 if '@'+message['mid'] not in _m.mentions:
+                    print("not to me")
                     message_store.add_message(
                         _m.text,
                         _m.url,
@@ -107,6 +117,7 @@ async def process_update(event):
                         _m.id,
                         message['mid']
                     )
+                    print("message stored")
                     if _m.in_reply_to_id:
                         for j in message['m'].jids:
                             # check if user has disabled replies receiving
@@ -118,6 +129,7 @@ async def process_update(event):
                                                     mtype='chat')
                                 msg.send()
                     else:
+                        print("passed to xmpp")
                         for j in message['m'].jids:
                             msg = XMPP.make_message(j,
                                                 _m.text,
@@ -149,10 +161,15 @@ async def process_update(event):
                     #pass
         except Empty:
             print('e', end='')
+        except Exception as e:
+            print("Exception: \n" + srt(e))
+        except:
+            print("unhandled exception")
         print('.', end='')
         await asyncio.sleep(1)
 
 async def process_notification(event):
+    # asyncio.current_task().set_name('process_notofication')
     while 1:
         try:
             message = notification_queue.get(block=False)
@@ -867,6 +884,7 @@ def process_xmpp_config(message):
                     
 
 async def process_xmpp(event):
+    # asyncio.current_task().set_name('process_xmpp')
     while 1:
         try:
             message = xmpp_queue.get(block=False)
@@ -922,15 +940,33 @@ async def process_xmpp(event):
         except Empty:
             pass
         await asyncio.sleep(.2)
-        
+
 async def check_timeout(event):
+    # asyncio.current_task().set_name('check_timeout')
     while 1:
+        tasks=asyncio.all_tasks()
+        print("num of tasks:" + str(len(tasks)))
+        if len(tasks) < 4:
+            try:
+                msg = XMPP.make_message(
+                    'admin@xmmg.ru',
+                    'Task crushed',
+                    mtype='chat',
+                    mfrom='alerts@'+HOST)
+                msg.send()
+                XMPP.disconnect()
+            except Exception as e:
+                print(e)
         t=int(time())
         for k,v in mastodon_listeners.items():
             if v.check_timeout(): # timeout!
                 v.close_listener()
                 v.create_listener()
         await asyncio.sleep(2)
+
+def disconnected(s):
+    print("disconnected: "+str(s))
+    exit(1)
 
 
 if __name__ == '__main__':
@@ -950,6 +986,7 @@ if __name__ == '__main__':
     XMPP.add_event_handler('session_start', process_notification)
     XMPP.add_event_handler('session_start', process_xmpp)
     XMPP.add_event_handler('session_start', check_timeout)
+    XMPP.add_event_handler('disconnected', disconnected)
     
     XMPP.register_plugin('xep_0030') # Service Discovery
     XMPP.register_plugin('xep_0065', {
