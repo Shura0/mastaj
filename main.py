@@ -109,15 +109,6 @@ async def process_update(event):
                 print("unknown message")
                 if '@'+message['mid'] not in _m.mentions:
                     print("not to me")
-                    message_store.add_message(
-                        _m.text,
-                        _m.url,
-                        _m.mentions,
-                        _m.visibility,
-                        _m.id,
-                        message['mid']
-                    )
-                    print("message stored")
                     if _m.in_reply_to_id:
                         for j in message['m'].jids:
                             # check if user has disabled replies receiving
@@ -128,6 +119,14 @@ async def process_update(event):
                                                     mfrom='home@'+HOST,
                                                     mtype='chat')
                                 msg.send()
+                                message_store.add_message(
+                                    _m.text,
+                                    _m.url,
+                                    _m.mentions,
+                                    _m.visibility,
+                                    _m.id,
+                                    message['mid']
+                                )
                     else:
                         print("passed to xmpp")
                         for j in message['m'].jids:
@@ -136,6 +135,14 @@ async def process_update(event):
                                                 mfrom='home@'+HOST,
                                                 mtype='chat')
                             msg.send()
+                            message_store.add_message(
+                                    _m.text,
+                                    _m.url,
+                                    _m.mentions,
+                                    _m.visibility,
+                                    _m.id,
+                                    message['mid']
+                                )
                 else:
                     print("recipient is in mentions. Ignored")
                     print("from_id=",_m.from_mid)
