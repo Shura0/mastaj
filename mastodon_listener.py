@@ -95,8 +95,9 @@ class MastodonListener(StreamListener):
                 acct=acct+'@'+self.server_name
             m.from_mid=acct
             m.add_mentions("@" + acct)
-            if not '@' in data['reblog']['account']['acct']:
-                acct=data['reblog']['account']['acct']+'@'+self.server_name
+            acct=data['reblog']['account']['acct']
+            if not '@' in acct:
+                acct=acct+'@'+self.server_name
             m.add_mentions("@" + acct)
             to_out = "@{} reblog status of @{}:\n".format(
                 data['account']['acct'],
