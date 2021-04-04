@@ -275,6 +275,13 @@ class TestAll(unittest.TestCase):
         toot=message_store.get_message_by_id(id)
         sample.update(['@test2@mastodon.social'])
         self.assertEqual(set(toot['mentions'].split(' ')),sample)
+        toot['mentions']=toot['mentions'].split(' ')
+        print(*toot)
+        res = message_store.add_message(**toot)
+        self.assertEqual(res, None)
+        toot['mid']='test@test.tld'
+        res = message_store.add_message(**toot)
+        self.assertNotEqual(res, None)
         
         search_for='''@inhosin@mastodon.ml:
 Захотелось прочитать книгу по Linux. А то юзаю как чайник.'''

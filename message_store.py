@@ -39,34 +39,39 @@ class MessageStore:
             if a:
                 print('ok')
 
-    def add_message(self,message,url,mentions,visibility,id, mid, feed='home'):
+    def add_message(self, message, url, mentions, visibility, id, mid, feed='home', date=0):
         mentions_str=" ".join(mentions)
         sql = "SELECT id from 'Messages' WHERE id=? AND mid=?"
+        print(id,mid)
         res=self.cursor.execute(sql,[id,mid])
         res = self.cursor.fetchall()
         print("CURSOR")
         print(res)
         if res:
-            return
+            return None
         sql = "INSERT INTO 'Messages' (date, url, mentions, message, visibility, id, mid, feed) VALUES (?, ?, ?, ?, ?, ?, ?, ?);"
-        params=(datetime.today().timestamp(),
-                            url,
-                            mentions_str,
-                            message,
-                            visibility,
-                            str(id),
-                            mid,
-                            feed)
+        d = int(datetime.today().timestamp())
+        if date:
+            d = date
+        params=(d,
+                url,
+                mentions_str,
+                message,
+                visibility,
+                str(id),
+                mid,
+                feed)
         print(params)
         res=self.cursor.execute(sql,
                             params
                             )
         print(res)
         self.db.commit()
+        return res
     
-    def find_message(self, text, mid):
+    def find_message(self, text, mid, feed='home'):
         text=re.sub(r'([^"])"',r'\1""',text)
-        text='message:"'+text+'" mid:"' + str(mid) + '"'
+        text='message:"'+text+'" mid:"' + str(mid) + '" feed:"' + str(feed) + '"'
         sql="SELECT * FROM 'Messages' WHERE Messages MATCH (?) ORDER BY 'date' DESC";
         res=self.cursor.execute(sql,[text])
         a=self.cursor.fetchall()
@@ -112,3 +117,4 @@ class MessageStore:
     def del_messages_by_mid(self, mid):
         self.cursor.execute("DELETE FROM 'Messages' WHERE mid= (?)", [mid])
         self.db.commit()
+    
