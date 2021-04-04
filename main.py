@@ -29,7 +29,7 @@ xmpp_server = config.XMPP_SERVER
 xmpp_port = config.XMPP_PORT
 xmpp_queue=Queue()
 
-
+ADMIN_JID='admin@xmmg.ru'
 
 notification_queue=Queue()
 update_queue=Queue()
@@ -76,7 +76,7 @@ async def process_update(event):
                 stored_message=message_store.get_message_by_id(first_message.id)
                 if stored_message:
                     print("found")
-                    message_store.update_mentions(first_message.id,_m.mentions)
+                    # message_store.update_mentions(first_message.id,_m.mentions)
                     mentions_str=stored_message['mentions']
                     mentions=set(mentions_str.split(' '))
                     if message['mid'] in mentions:
@@ -339,6 +339,15 @@ You cannot write new messages in this chat. To make new massage please send it t
             raise mastodon_listener.NotFoundError()
         for _m in thread_messages:
             print(_m)
+            message_store.add_message(
+                _m.text,
+                _m.url,
+                _m.mentions,
+                _m.visibility,
+                _m.id,
+                user['mid'],
+                thread_messages[0].id
+            )
             msg = XMPP.make_message(
                 message['jid'],
                 _m.text,
@@ -422,6 +431,15 @@ You cannot write new messages in this chat. To make new massage please send it t
         if command == '.' or command == '': #get thread
             thread_messages=mastodon.get_thread(message_id)
             for _m in thread_messages:
+                message_store.add_message(
+                    _m.text,
+                    _m.url,
+                    _m.mentions,
+                    _m.visibility,
+                    _m.id,
+                    user['mid'],
+                    thread_messages[0].id
+                )
                 msg = XMPP.make_message(
                 message['jid'],
                 _m.text,
@@ -502,6 +520,15 @@ def process_xmpp_thread(message):
         thread = mastodon.get_thread(mid)
         #print(thread)
         for m in thread:
+            message_store.add_message(
+                m.text,
+                m.url,
+                m.mentions,
+                m.visibility,
+                m.id,
+                user['mid'],
+                thread[0].id
+            )
             msg = XMPP.make_message(
                 message['jid'],
                 m.text,
@@ -579,24 +606,88 @@ def process_xmpp_thread(message):
         msg.send()
     else:
         if len(body) > 2: # Answer to post
+            message_id=0
+            if re.match(r'(?:>|»)', body, re.I|re.MULTILINE): # quotation
+                print("quotation in thread")
+                strings=body.split('\n')
+                print(strings)
+                original_post=''
+                while len(strings) > 0:
+                    l = strings.pop(0)
+                    q=re.search(r'(?:>|») ?(.+)', l)
+                    if q and q.group(1):
+                        original_post+=q.group(1)+'\n'
+                    else:
+                        strings.append(l) # return a string back
+                        break #end of quotation
+                print('Original post was:')
+                original_post.rstrip()
+                print(original_post)
+                toot=message_store.find_message(original_post, user['mid'], feed=str(mid))
+                if not toot:
+                    raise mastodon_listener.NotFoundError()
+                message_id=toot['id']
+                answer="\n".join(strings)
+                
             # toot=message_store.get_message_by_id(mid)
-            try: # Answer to last message in the thread
-                thread=mastodon.get_thread(mid)
-                mentions_str=get_mentions(thread)
-                mastodon.status_post(
-                    status=mentions_str + ' ' + body,
-                    in_reply_to_id=thread[-1].id,
-                    visibility=thread[-1].visibility
-                )
-                message_store.update_mentions(
-                    mid,
-                    ['@'+user.get('mid')]
-                )
+            try: # Answer to last received message in the thread
+                if not message_id:
+                    messages=message_store.get_messages_for_user_by_thread(
+                        user['mid'],
+                        mid
+                    )
+                    message_id=messages[0]
+                    answer=body
+                last_message = message_store.get_message_by_id(message_id)
+                mentions = last_message['mentions'].split(' ')
+                author=mentions.pop(0)
+                mentions_str=' '.join(mentions)
+                if len(answer) > 2:
+                    mastodon.status_post(
+                        status = author + " " + answer + '\n ' + mentions_str,
+                        in_reply_to_id = message_id,
+                        visibility = last_message['visibility']
+                    )
+                else:
+                    print('answer too short')
+                    msg = XMPP.make_message(
+                        message['jid'],
+                        'answer too short, it should be more than 2 chars',
+                        mfrom=str(mid) + '@' + HOST,
+                        mtype='chat')
+                    msg.send()
+                # thread=mastodon.get_thread(mid)
+                # mentions_str=get_mentions(thread)
+                # mastodon.status_post(
+                #     status=mentions_str + ' ' + body,
+                #     in_reply_to_id=thread[-1].id,
+                #     visibility=thread[-1].visibility
+                # )
+                # message_store.update_mentions(
+                #     mid,
+                #     ['@'+user.get('mid')]
+                # )
             except mastodon_listener.APIError as e:
                 msg = XMPP.make_message(
                 message['jid'],
                 str(e),
                 mfrom=str(mid) + '@' + HOST,
+                mtype='chat')
+                msg.send()
+            except Exception as e:
+                msg = XMPP.make_message(
+                message['jid'],
+                'Internal error',
+                mfrom=str(mid) + '@' + HOST,
+                mtype='chat')
+                msg.send()
+                
+                msg = XMPP.make_message(
+                ADMIN_JID,
+                str(e) + "\n" +
+                "message_id" + str(mid) + "\n" +
+                "for " + message['jid'],
+                mfrom='alerts@' + HOST,
                 mtype='chat')
                 msg.send()
         else: #seems like an error in command input
@@ -949,7 +1040,7 @@ async def check_timeout(event):
         if len(tasks) < 4:
             try:
                 msg = XMPP.make_message(
-                    'admin@xmmg.ru',
+                    ADMIN_JID,
                     'Task crushed',
                     mtype='chat',
                     mfrom='alerts@'+HOST)
