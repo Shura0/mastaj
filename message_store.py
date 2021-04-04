@@ -107,10 +107,14 @@ class MessageStore:
         a=self.cursor.fetchall()
         return [i['id'] for i in a]
     
-    def get_messages_for_user_by_thread(self, mid, thread):
+    def get_messages_for_user_by_thread(self, mid, feed):
         sql="SELECT id FROM 'Messages' WHERE mid=(?) AND feed=(?) ORDER BY date DESC";
-        self.cursor.execute(sql, (mid, str(thread)))
+        print("mid:"+mid)
+        print("feed:"+feed)
+        self.cursor.execute(sql, (mid, int(feed)))
         a=self.cursor.fetchall()
+        for i in a:
+            print(i)
         return [i['id'] for i in a]
     
     

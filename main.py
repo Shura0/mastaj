@@ -636,6 +636,7 @@ def process_xmpp_thread(message):
                         user['mid'],
                         mid
                     )
+                    print(messages)
                     message_id=messages[0]
                     answer=body
                 last_message = message_store.get_message_by_id(message_id)
