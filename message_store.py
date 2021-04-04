@@ -41,9 +41,9 @@ class MessageStore:
 
     def add_message(self, message, url, mentions, visibility, id, mid, feed='home', date=0):
         mentions_str=" ".join(mentions)
-        sql = "SELECT id from 'Messages' WHERE id=? AND mid=?"
-        print(id,mid)
-        res=self.cursor.execute(sql,[id,mid])
+        sql = "SELECT id from 'Messages' WHERE id=? AND mid=? AND feed=?"
+        print(id, mid, str(feed))
+        res=self.cursor.execute(sql,[str(id),mid, str(feed)])
         res = self.cursor.fetchall()
         print("CURSOR")
         print(res)
@@ -60,7 +60,7 @@ class MessageStore:
                 visibility,
                 str(id),
                 mid,
-                feed)
+                str(feed))
         print(params)
         res=self.cursor.execute(sql,
                             params
@@ -111,7 +111,7 @@ class MessageStore:
         sql="SELECT id FROM 'Messages' WHERE mid=(?) AND feed=(?) ORDER BY date DESC";
         print("mid:"+mid)
         print("feed:"+feed)
-        self.cursor.execute(sql, (mid, int(feed)))
+        self.cursor.execute(sql, (mid, str(feed)))
         a=self.cursor.fetchall()
         for i in a:
             print(i)

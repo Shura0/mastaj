@@ -201,7 +201,7 @@ class MastodonListener(StreamListener):
             m.visibility=data['status']['visibility']
             mentions = data['status']['mentions']
             for a in mentions:
-                if not '@' in a:
+                if not '@' in a['acct']:
                     a['acct']+='@'+self.server_name
                 m.add_mentions('@' + a['acct'])
             text=parser.get_result()
