@@ -643,11 +643,21 @@ def process_xmpp_thread(message):
                 mentions = last_message['mentions'].split(' ')
                 author=mentions.pop(0)
                 mentions_str=' '.join(mentions)
+                mentions.append(author)
                 if len(answer) > 2:
-                    mastodon.status_post(
+                    toot=mastodon.status_post(
                         status = author + " " + answer + '\n ' + mentions_str,
                         in_reply_to_id = message_id,
                         visibility = last_message['visibility']
+                    )
+                    message_store.add_message(
+                        author + " " + answer + '\n ' + mentions_str,
+                        toot['url'],
+                        mentions,
+                        last_message['visibility'],
+                        toot['id'],
+                        user['mid'],
+                        mid
                     )
                 else:
                     print('answer too short')
