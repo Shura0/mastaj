@@ -94,8 +94,7 @@ class MastodonListener(StreamListener):
             if not '@' in acct:
                 acct=acct+'@'+self.server_name
             m.from_mid=acct
-            m.add_mentions("@" + acct)
-            acct=data['reblog']['account']['acct']
+            acct=cont['account']['acct']
             if not '@' in acct:
                 acct=acct+'@'+self.server_name
             m.add_mentions("@" + acct)

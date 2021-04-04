@@ -1,7 +1,7 @@
 [{
         "id": "103572152145335292",
         "mentions": [
-                "@armitage@quey.org"
+                "@armitage@pixelfed.social"
         ],
         "url": "https://pixelfed.social/p/armitage/128466590692937728",
         "text": "@armitage@quey.org reblog status of @armitage@pixelfed.social:\n#black #cat #котэ at #white #winter #snow in #russia\nhttps://files.mastodon.social/media_attachments/files/024/544/255/original/149e12ff72de612c.jpeg",
