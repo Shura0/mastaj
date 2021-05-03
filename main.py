@@ -657,7 +657,7 @@ def process_xmpp_thread(message):
                 except ValueError:
                     pass
                 if len(answer) > 2:
-                    
+                    mentions_str=' '.join(mentions)
                     toot=mastodon.status_post(
                         status = author + answer + '\n ' + mentions_str,
                         in_reply_to_id = message_id,
