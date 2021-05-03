@@ -647,13 +647,19 @@ def process_xmpp_thread(message):
                     message_id=messages[0]
                     answer=body
                 last_message = message_store.get_message_by_id(message_id)
+                last_message['mentions']=last_message['mentions'].lower()
                 mentions = last_message['mentions'].split(' ')
-                author=mentions.pop(0)
-                mentions_str=' '.join(mentions)
-                mentions.append(author)
+                author = mentions.pop(0) + ' ' # Space is matter!
+                if author == user['mid'].lower():
+                    author = ''
+                try:
+                    mentions.remove(user['mid'].lower())
+                except ValueError:
+                    pass
                 if len(answer) > 2:
+                    
                     toot=mastodon.status_post(
-                        status = author + " " + answer + '\n ' + mentions_str,
+                        status = author + answer + '\n ' + mentions_str,
                         in_reply_to_id = message_id,
                         visibility = last_message['visibility']
                     )
