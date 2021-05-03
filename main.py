@@ -1060,7 +1060,6 @@ async def check_timeout(event):
     # asyncio.current_task().set_name('check_timeout')
     while 1:
         tasks=asyncio.all_tasks()
-        print("num of tasks:" + str(len(tasks)))
         if len(tasks) < 4:
             try:
                 msg = XMPP.make_message(
