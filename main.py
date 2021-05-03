@@ -167,12 +167,13 @@ async def process_update(event):
                     # No need to send message. We will receive a duplicate via notification
                     #pass
         except Empty:
-            print('e', end='')
+            # print('e', end='')
+            pass
         except Exception as e:
             print("Exception: \n" + srt(e))
         except:
             print("unhandled exception")
-        print('.', end='')
+        # print('.', end='')
         await asyncio.sleep(1)
 
 async def process_notification(event):
@@ -862,8 +863,8 @@ def process_xmpp_config(message):
                 '"server server.tld" - assign new mastodon instance\n' +
                 '"disable" or "d" - temporary disable notifications\n' +
                 '"enable" or "e" - enable notifications\n' +
-                '"replies on" - enable replies in home feed\n' +
-                '"replies off" - disable replies in home feed\n' +
+                '"replies on" - show replies in home feed\n' +
+                '"replies off" - do not show replies in home feed\n' +
                 '"autoboost <mastodon id>" or "ab <mastodon id>" - enable autoboost for <mastodon id>\n' +
                 '"info" or "i" - information about account\n',
                 mfrom='config@' + HOST,
