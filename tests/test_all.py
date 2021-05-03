@@ -427,7 +427,7 @@ https://zenrus.ru/'''
                 mentions_str=res.group(1)
                 print(mentions_str)
                 mentions=mentions_str.split(' ')
-                mentions_ex=['\n','@shura@pixelfed.social']
+                mentions_ex=['\n','']
                 S.assertEqual(mentions, mentions_ex)
                 print(mentions)
                 
@@ -444,6 +444,10 @@ https://zenrus.ru/'''
             'shura@mastodon.social':m
         }
         main.process_xmpp_thread(message)
+        new_message=main.message_store.get_message_by_id('id')
+        print(new_message['mentions'])
+        self.assertEqual(new_message['mentions'],'@shura@pixelfed.social ' )
+        # main.sleep(100)
 
 if __name__ == '__main__':
     unittest.main()

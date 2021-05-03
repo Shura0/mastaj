@@ -651,7 +651,7 @@ def process_xmpp_thread(message):
                 mentions = last_message['mentions'].lower().split(' ')
                 author=''
                 try:
-                    author = mentions[0] + ' ' # Space is matter!
+                    author = mentions.pop(0) + ' ' # Space is matter!
                     if author == '@'+user['mid'].lower():
                         author = ''
                     mentions.remove('@'+user['mid'].lower())
@@ -659,6 +659,7 @@ def process_xmpp_thread(message):
                     pass
                 if len(answer) > 2:
                     mentions_str=' '.join(mentions)
+                    mentions.append(author)
                     print("Answer from "+user['mid'])
                     print("Mentions: "+ mentions_str)
                     toot=mastodon.status_post(
