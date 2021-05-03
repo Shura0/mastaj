@@ -447,7 +447,7 @@ https://zenrus.ru/'''
         new_message=main.message_store.get_message_by_id('id')
         print(new_message['mentions'])
         self.assertEqual(new_message['mentions'],'@shura@pixelfed.social ' )
-        # main.sleep(100)
+
 
 if __name__ == '__main__':
     unittest.main()
