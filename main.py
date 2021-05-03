@@ -648,12 +648,12 @@ def process_xmpp_thread(message):
                     message_id=messages[0]
                     answer=body
                 last_message = message_store.get_message_by_id(message_id)
-                last_message['mentions']=last_message['mentions'].lower()
-                mentions = last_message['mentions'].split(' ')
-                author = mentions.pop(0) + ' ' # Space is matter!
-                if author == '@'+user['mid'].lower():
-                    author = ''
+                mentions = last_message['mentions'].lower().split(' ')
+                author=''
                 try:
+                    author = mentions[0] + ' ' # Space is matter!
+                    if author == '@'+user['mid'].lower():
+                        author = ''
                     mentions.remove('@'+user['mid'].lower())
                 except ValueError:
                     pass
@@ -667,7 +667,7 @@ def process_xmpp_thread(message):
                         visibility = last_message['visibility']
                     )
                     message_store.add_message(
-                        author + " " + answer + '\n ' + mentions_str,
+                        author + answer + '\n ' + mentions_str,
                         toot['url'],
                         mentions,
                         last_message['visibility'],

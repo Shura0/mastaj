@@ -2,6 +2,7 @@
 
 import unittest
 import sys
+import re
 
 # sys.path.append('./venv/lib/python3.7/site-packages')
 sys.path.append('../venv/lib/python3.7/site-packages')
@@ -409,6 +410,40 @@ https://zenrus.ru/'''
         # print(text)
         self.assertEqual(text, sample_text)
 
+    def test_process_xmpp_thread(self):
+        S=self
+        message={
+            'jid':'admin@home.myhome',
+            'to':'105254999743786130@mastodon.xmpp.ru',
+            'body':"> @shura:\n> @Shura@pixelfed.social  @shura нормалды\nanswer"
+        }
+        class myMasto:
+            def status_post(self, status, in_reply_to_id, visibility):
+                print('status=', status)
+                print('in_rely_to_id=', in_reply_to_id)
+                print('visibility=',visibility)
+                
+                res=re.search(r'answer(.*)',status, flags=re.M|re.S)
+                mentions_str=res.group(1)
+                print(mentions_str)
+                mentions=mentions_str.split(' ')
+                mentions_ex=['\n','@shura@pixelfed.social']
+                S.assertEqual(mentions, mentions_ex)
+                print(mentions)
+                
+                return {
+                    'url':'url',
+                    'id':'id',
+                }
+        m=myMasto()
+        tmp_db=MESSAGES_TEST_DB+'.bak'
+        copyfile(MESSAGES_TEST_DB, tmp_db)
+        main.message_store=MessageStore(tmp_db)
+        main.users_db = db.Db(USERS_TEST_DB)
+        main.mastodon_listeners = {
+            'shura@mastodon.social':m
+        }
+        main.process_xmpp_thread(message)
 
 if __name__ == '__main__':
     unittest.main()
