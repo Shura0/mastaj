@@ -1018,6 +1018,17 @@ async def process_xmpp(event):
                     process_xmpp_thread(message)
                 elif message['to'].startswith('config@'):
                     process_xmpp_config(message)
+                elif re.search(r'.+|new@', message['to']): # new post to group
+                    res = re.match(r'(.+)\|new@', message['to'])
+                    group = res.group(1)
+                    _group=group.replace('#','@')
+                    if not _group.startswith("@"):
+                        _group = '@' + _group
+                    print("writing in group "+_group)
+                    message['body'] = _group + ' ' + message['body']
+                    process_xmpp_new(message)
+                    
+                    
             else: # It's a command
                 command=message.get('command')
                 user=users_db.get_user_by_jid(message['jid'])
