@@ -167,12 +167,13 @@ async def process_update(event):
                     # No need to send message. We will receive a duplicate via notification
                     #pass
         except Empty:
-            print('e', end='')
+            # print('e', end='')
+            pass
         except Exception as e:
             print("Exception: \n" + srt(e))
         except:
             print("unhandled exception")
-        print('.', end='')
+        # print('.', end='')
         await asyncio.sleep(1)
 
 async def process_notification(event):
@@ -647,18 +648,27 @@ def process_xmpp_thread(message):
                     message_id=messages[0]
                     answer=body
                 last_message = message_store.get_message_by_id(message_id)
-                mentions = last_message['mentions'].split(' ')
-                author=mentions.pop(0)
-                mentions_str=' '.join(mentions)
-                mentions.append(author)
+                mentions = last_message['mentions'].lower().split(' ')
+                author=''
+                try:
+                    author = mentions.pop(0) + ' ' # Space is matter!
+                    if author == '@'+user['mid'].lower():
+                        author = ''
+                    mentions.remove('@'+user['mid'].lower())
+                except ValueError:
+                    pass
                 if len(answer) > 2:
+                    mentions_str=' '.join(mentions)
+                    mentions.append(author)
+                    print("Answer from "+user['mid'])
+                    print("Mentions: "+ mentions_str)
                     toot=mastodon.status_post(
-                        status = author + " " + answer + '\n ' + mentions_str,
+                        status = author + answer + '\n ' + mentions_str,
                         in_reply_to_id = message_id,
                         visibility = last_message['visibility']
                     )
                     message_store.add_message(
-                        author + " " + answer + '\n ' + mentions_str,
+                        author + answer + '\n ' + mentions_str,
                         toot['url'],
                         mentions,
                         last_message['visibility'],
@@ -854,8 +864,8 @@ def process_xmpp_config(message):
                 '"server server.tld" - assign new mastodon instance\n' +
                 '"disable" or "d" - temporary disable notifications\n' +
                 '"enable" or "e" - enable notifications\n' +
-                '"replies on" - enable replies in home feed\n' +
-                '"replies off" - disable replies in home feed\n' +
+                '"replies on" - show replies in home feed\n' +
+                '"replies off" - do not show replies in home feed\n' +
                 '"autoboost <mastodon id>" or "ab <mastodon id>" - enable autoboost for <mastodon id>\n' +
                 '"info" or "i" - information about account\n',
                 mfrom='config@' + HOST,
@@ -1008,6 +1018,17 @@ async def process_xmpp(event):
                     process_xmpp_thread(message)
                 elif message['to'].startswith('config@'):
                     process_xmpp_config(message)
+                elif re.search(r'.+|new@', message['to']): # new post to group
+                    res = re.match(r'(.+)\|new@', message['to'])
+                    group = res.group(1)
+                    _group=group.replace('#','@')
+                    if not _group.startswith("@"):
+                        _group = '@' + _group
+                    print("writing in group "+_group)
+                    message['body'] = _group + ' ' + message['body']
+                    process_xmpp_new(message)
+                    
+                    
             else: # It's a command
                 command=message.get('command')
                 user=users_db.get_user_by_jid(message['jid'])
@@ -1054,7 +1075,6 @@ async def check_timeout(event):
     # asyncio.current_task().set_name('check_timeout')
     while 1:
         tasks=asyncio.all_tasks()
-        print("num of tasks:" + str(len(tasks)))
         if len(tasks) < 4:
             try:
                 msg = XMPP.make_message(
