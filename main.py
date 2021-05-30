@@ -15,6 +15,7 @@ import gxmpp
 import json
 import db
 from time import time
+import datetime
 
 import config
 
@@ -29,7 +30,7 @@ xmpp_server = config.XMPP_SERVER
 xmpp_port = config.XMPP_PORT
 xmpp_queue=Queue()
 
-ADMIN_JID='admin@xmmg.ru'
+ADMIN_JID=config.ADMIN_JID
 
 notification_queue=Queue()
 update_queue=Queue()
@@ -61,6 +62,7 @@ async def process_update(event):
     while 1:
         try:
             message = update_queue.get(block=False)
+            print(datetime.datetime.now().isoformat())
             print("update queue is not empty")
             _m=message['status']
             print("mid:",message['mid'])
@@ -1000,6 +1002,8 @@ def process_xmpp_config(message):
                         mfrom='config@' + HOST,
                         mtype='chat')
                 msg.send()
+            elif body=='restart' and user['jid'] == ADMIN_JID:
+                exit(0)
                     
 
 async def process_xmpp(event):
@@ -1077,9 +1081,10 @@ async def check_timeout(event):
         tasks=asyncio.all_tasks()
         if len(tasks) < 4:
             try:
+                print("task crashed")
                 msg = XMPP.make_message(
                     ADMIN_JID,
-                    'Task crushed',
+                    'Task crashed',
                     mtype='chat',
                     mfrom='alerts@'+HOST)
                 msg.send()
