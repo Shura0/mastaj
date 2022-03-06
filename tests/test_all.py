@@ -427,7 +427,7 @@ https://zenrus.ru/'''
                 mentions_str=res.group(1)
                 print(mentions_str)
                 mentions=mentions_str.split(' ')
-                mentions_ex=['\n','']
+                mentions_ex=['']
                 S.assertEqual(mentions, mentions_ex)
                 print(mentions)
                 
@@ -445,9 +445,39 @@ https://zenrus.ru/'''
         }
         main.process_xmpp_thread(message)
         new_message=main.message_store.get_message_by_id('id')
+        print("mentions")
         print(new_message['mentions'])
         self.assertEqual(new_message['mentions'],'@shura@pixelfed.social ' )
 
+    def test_quotation(self):
+        S=self
+        message={
+            'jid':'admin@home.myhome',
+            'to':'107903110563192732@mastodon.xmpp.ru',
+            'body':"> Главный проект\nSaluton!\n> https://mycorrhiza.wiki\nВсе изменения в git? diff'ы читаемые?"
+        }
+        class myMasto:
+            def status_post(self, status, in_reply_to_id, visibility):
+                print('status=', status)
+                print('in_rely_to_id=', in_reply_to_id)
+                print('visibility=',visibility)
+                return {
+                    'url':'url',
+                    'id':'id',
+                }
+        m=myMasto()
+        tmp_db=MESSAGES_TEST_DB+'.bak'
+        copyfile(MESSAGES_TEST_DB, tmp_db)
+        main.message_store=MessageStore(tmp_db)
+        main.users_db = db.Db(USERS_TEST_DB)
+        main.mastodon_listeners = {
+            'shura@mastodon.social':m
+        }
+        main.process_xmpp_thread(message)
+        new_message=main.message_store.get_message_by_id('id')
+        print("mentions")
+        print(new_message)
+        self.assertEqual(new_message['message'],"@bouncepaw@lor.sh  Saluton!\n> https://mycorrhiza.wiki\nВсе изменения в git? diff'ы читаемые?" )
 
 if __name__ == '__main__':
     unittest.main()

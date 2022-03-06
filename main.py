@@ -634,11 +634,11 @@ def process_xmpp_thread(message):
                     if q and q.group(1):
                         original_post += q.group(1) + '\n'
                     else:
-                        strings.append(l)  # return a string back
+                        strings.insert(0,l)  # return a string back
                         break  # end of quotation
                 print('Original post was:')
-                original_post.rstrip()
-                print(original_post)
+                original_post=original_post.rstrip()
+                print('"'+original_post+'"')
                 toot = message_store.find_message(original_post, user['mid'], feed=str(mid))
                 if not toot:
                     raise mastodon_listener.NotFoundError()
@@ -834,8 +834,8 @@ def process_xmpp_config(message):
                         pass
                     m.add_jids([user['jid']])
                     m.update_mid(mid)
-                    m.create_listener(update_queue, notification_queue)
-                    mastodon_listeners[mid] = m
+                    if(m.create_listener(update_queue, notification_queue)):
+                        mastodon_listeners[mid] = m
                 msg = XMPP.make_message(
                     message['jid'],
                     'You have registered\n' +
@@ -920,8 +920,8 @@ def process_xmpp_config(message):
                 except (KeyError, AttributeError):
                     m = MastodonUser(user.get('mid'), user.get('token'))
                     m.add_jids([user['jid']])
-                    m.create_listener(update_queue, notification_queue)
-                    mastodon_listeners[user.get('mid')] = m
+                    if(m.create_listener(update_queue, notification_queue)):
+                        mastodon_listeners[user.get('mid')] = m
                 msg = XMPP.make_message(
                     message['jid'],
                     'Message delivery is ENABLED',
@@ -1144,8 +1144,8 @@ if __name__ == '__main__':
     for k, v in USER_LIST.items():
         m = MastodonUser(k, v.get('token'))
         m.add_jids(v.get('jids'))
-        m.create_listener(update_queue, notification_queue)
-        mastodon_listeners[k] = m
+        if(m.create_listener(update_queue, notification_queue)):
+            mastodon_listeners[k] = m
 
     print("Full list of listeners:")
     for k, v in mastodon_listeners.items():

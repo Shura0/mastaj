@@ -3,7 +3,7 @@
 
 from mastodon import Mastodon, StreamListener,\
 MastodonNotFoundError, MastodonAPIError, MastodonUnauthorizedError,\
-MastodonNetworkError, MastodonIllegalArgumentError
+MastodonNetworkError, MastodonIllegalArgumentError, MastodonVersionError
 
 # import time
 from queue import Empty
@@ -76,7 +76,7 @@ class MastodonListener(StreamListener):
         # self.update_q = update
         # self.message_q = message
         self.server_name=re.findall(r'([^@]+)$',self.mid)[0]
-        print('new listener')
+        print('new listener for ' + mid)
 
     def setMid(self, mid):
         self.mid = mid
@@ -273,8 +273,15 @@ class MastodonUser:
             pass
     
     def create_listener(self, update_queue=0, notification_queue=0):
-        self.listener=MastodonListener(self.mastodon_id)
-        self.stream=self.mastodon.stream_user(self.listener,run_async=True, reconnect_async=True)
+        try:
+            self.listener=MastodonListener(self.mastodon_id)
+            self.stream=self.mastodon.stream_user(self.listener,run_async=True, timeout=30, reconnect_async=True)
+        except MastodonVersionError:
+            print("Failed to register listener for " + self.mastodon_id)
+            return 0
+        except urllib3.exceptions.ReadTimeoutError:
+            print("Connect timeout for " + self.mastodon_id)
+            return 0
         print ("added listener for", self.mastodon_id)
         self.listener.jids=self.jids
         self.listener.on_update=self.on_update
@@ -284,6 +291,7 @@ class MastodonUser:
             self.update_q=update_queue
         if notification_queue:
             self.notification_q=notification_queue
+        return 1
         
     def on_update(self, status):
         print("!UPDATE to " + self.mastodon_id + ":")

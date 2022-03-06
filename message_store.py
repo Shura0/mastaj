@@ -67,6 +67,7 @@ class MessageStore:
                             )
         print(res)
         self.db.commit()
+        print("commit success")
         return res
     
     def find_message(self, text, mid, feed='home'):
