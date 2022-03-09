@@ -34,6 +34,9 @@ class APIError(MastodonAPIError):
 class NetworkError(MastodonNetworkError):
     pass
 
+class GenericError(Exception):
+    pass
+
 class EncodedMessage:
     def __init__(self):
         self.id = 0
@@ -417,6 +420,9 @@ class MastodonUser:
             return self.listener.process_update(res)
         except MastodonNotFoundError:
             raise NotFoundError()
+        except Exception as e:
+            print("Generic error")
+            raise GenericError(str(e))
     
     def status_favourite(self, id):
         try:
@@ -426,6 +432,9 @@ class MastodonUser:
             return res
         except MastodonNotFoundError:
             raise NotFoundError()
+        except Exception as e:
+            print("Generic error")
+            raise GenericError(str(e))
     
     def get_status(self, id):
         try:

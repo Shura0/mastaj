@@ -436,13 +436,15 @@ You cannot write new messages in this chat. To make new massage please send it t
                 strings.append(l)  # return a string back
                 break  # end of quotation
         print('Original post was:')
-        original_post.rstrip()
+        original_post = original_post.rstrip()
         print(original_post)
         toot = message_store.find_message(original_post, user['mid'])
         if not toot:
             raise mastodon_listener.NotFoundError()
         message_id = toot['id']
         command = "\n".join(strings)
+        print("command:" + command)
+        print("message id:" + message_id)
         if command == '.' or command == '':  # get thread
             thread_messages = mastodon.get_thread(message_id)
             for _m in thread_messages:
@@ -462,7 +464,17 @@ You cannot write new messages in this chat. To make new massage please send it t
                     mfrom=str(thread_messages[0].id) + '@' + HOST)
                 msg.send()
         elif command.lower() == 'r':  # reblog status
-            _m = mastodon.status_reblog(message_id)
+            try:
+                _m = mastodon.status_reblog(message_id)
+            except mastodon_listener.GenericError as e:
+                print("error!!!")
+                msg = XMPP.make_message(
+                    message['jid'],
+                    str(e),
+                    mtype='chat',
+                    mfrom='home@' + HOST)
+                msg.send()
+                return
             if _m:
                 msg = XMPP.make_message(
                     message['jid'],
@@ -471,7 +483,17 @@ You cannot write new messages in this chat. To make new massage please send it t
                     mfrom='home@' + HOST)
                 msg.send()
         elif command.lower() == 'f':  # favourite status
-            _m = mastodon.status_favourite(message_id)
+            try:
+                _m = mastodon.status_favourite(message_id)
+            except mastodon_listener.GenericError as e:
+                print("error!!!")
+                msg = XMPP.make_message(
+                    message['jid'],
+                    str(e),
+                    mtype='chat',
+                    mfrom='home@' + HOST)
+                msg.send()
+                return
             if _m:
                 msg = XMPP.make_message(
                     message['jid'],
