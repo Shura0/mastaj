@@ -34,6 +34,7 @@ class APIError(MastodonAPIError):
 class NetworkError(MastodonNetworkError):
     pass
 
+
 class GenericError(Exception):
     pass
 
@@ -76,6 +77,7 @@ class MastodonListener(StreamListener):
         self.mid = mid
         self.lastbeat=int(time())
         self.got_heartbeat=0
+        self.heartbeat_interval=TIMEOUT
         # self.update_q = update
         # self.message_q = message
         self.server_name=re.findall(r'([^@]+)$',self.mid)[0]
@@ -232,8 +234,11 @@ class MastodonListener(StreamListener):
 
     def handle_heartbeat(self):
         print("heartbeat from " + self.mid)
-        self.lastbeat=int(time())
-        self.got_heartbeat=1 # chack if server sends heartbeats at all
+        self.got_heartbeat = 1 # check if server sends heartbeats at all
+        if self.got_heartbeat:
+            self.heartbeat_interval = int(time()) - self.lastbeat
+            print("heartbeat_interval = " + str(self.heartbeat_interval))
+        self.lastbeat = int(time())
         
         # self.q.put({"mid": self.mid, 'json': {'content': 'beat'}})
         
@@ -248,11 +253,15 @@ class MastodonUser:
             try:
                 self.mastodon = Mastodon(
                     access_token=access_token,
-                    api_base_url='https://' + host
+                    api_base_url='https://' + host,
+                    request_timeout=10
                 )
             except MastodonNetworkError as e:
                 print(str(e))
                 raise NetworkError()
+            except Error as e:
+                print( "Other connection to mastodon error")
+                print(str(e))
         self.jids=set()
 
     def close_listener(self):
@@ -261,7 +270,7 @@ class MastodonUser:
             self.stream.close()
             self.stream=None
             print("stream for "+self.mastodon_id+" closed")
-        
+
     def update_mid(self, mid):
         self.mastodon_id=mid
     
@@ -278,11 +287,11 @@ class MastodonUser:
     def create_listener(self, update_queue=0, notification_queue=0):
         try:
             self.listener=MastodonListener(self.mastodon_id)
-            self.stream=self.mastodon.stream_user(self.listener,run_async=True, timeout=30, reconnect_async=True)
+            self.stream=self.mastodon.stream_user(self.listener,run_async=True, timeout=20, reconnect_async=True)
         except MastodonVersionError:
             print("Failed to register listener for " + self.mastodon_id)
             return 0
-        except urllib3.exceptions.ReadTimeoutError:
+        except Exception:
             print("Connect timeout for " + self.mastodon_id)
             return 0
         print ("added listener for", self.mastodon_id)
@@ -323,6 +332,10 @@ class MastodonUser:
             thread = self.mastodon.status_context(id)
             mentions = set()
             start_id = id
+        except MastodonNetworkError:
+            print("network error")
+            raise NetworkError()
+            return []
         except:
             raise NotFoundError()
             return []
@@ -396,13 +409,20 @@ class MastodonUser:
             return 0
     
     def check_timeout(self):
-        t = int(time())
         if not self.listener.got_heartbeat:
             return 0
-        if t - self.listener.lastbeat > TIMEOUT:
+        ct = int(time())
+        if (ct - self.listener.lastbeat) > ( TIMEOUT ):
             print("\n" + self.mastodon_id + " timeout")
+            self.listener.got_heartbeat=0
+            m= EncodedMessage()
+            m.mentions=''
+            m.in_reply_to_id=0
+            m.from_mid='error'
+            m.text='mastodon connetion timeout error for ' + self.mastodon_id
+            self.update_q.put({'mid': self.mastodon_id, 'status': m, 'm':self})
+            # self.close_listener()
             return 1
-        
         return 0
             
         
