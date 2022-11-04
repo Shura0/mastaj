@@ -5,6 +5,8 @@ from mastodon import Mastodon, StreamListener,\
 MastodonNotFoundError, MastodonAPIError, MastodonUnauthorizedError,\
 MastodonNetworkError, MastodonIllegalArgumentError, MastodonVersionError
 
+from requests import exceptions
+
 # import time
 from queue import Empty
 from multiprocessing import Queue
@@ -332,8 +334,8 @@ class MastodonUser:
             thread = self.mastodon.status_context(id)
             mentions = set()
             start_id = id
-        except MastodonNetworkError:
-            print("network error")
+        except (MastodonNetworkError, exceptions.ConnectionError):
+            print("network error for " + str(self.mastodon_id))
             raise NetworkError()
             return []
         except:

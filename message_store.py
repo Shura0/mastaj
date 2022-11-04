@@ -40,13 +40,13 @@ class MessageStore:
                 print('ok')
 
     def add_message(self, message, url, mentions, visibility, id, mid, feed='home', date=0):
-        mentions_str=" ".join(mentions)
+        mentions_str=(" ".join(mentions)).strip()
+        print("going to add message: " + message)
         sql = "SELECT id from 'Messages' WHERE id=? AND mid=? AND feed=?"
         print(id, mid, str(feed))
         res=self.cursor.execute(sql,[str(id),mid, str(feed)])
         res = self.cursor.fetchall()
         print("CURSOR")
-        print(res)
         if res:
             return None
         sql = "INSERT INTO 'Messages' (date, url, mentions, message, visibility, id, mid, feed) VALUES (?, ?, ?, ?, ?, ?, ?, ?);"
@@ -71,7 +71,9 @@ class MessageStore:
         return res
     
     def find_message(self, text, mid, feed='home'):
-        text=re.sub(r'([^"])"',r'\1""',text)
+        #text=re.sub(r'([^"])"',r'\1""',text)
+        text = re.sub(r'"', r'""', text)
+        print("Search for '"+text+"'")
         text='message:"'+text+'" mid:"' + str(mid) + '" feed:"' + str(feed) + '"'
         sql="SELECT * FROM 'Messages' WHERE Messages MATCH (?) ORDER BY 'date' DESC";
         res=self.cursor.execute(sql,[text])

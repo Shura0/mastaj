@@ -284,8 +284,7 @@ class TestAll(unittest.TestCase):
         res = message_store.add_message(**toot)
         self.assertNotEqual(res, None)
         
-        search_for='''@inhosin@mastodon.ml:
-Захотелось прочитать книгу по Linux. А то юзаю как чайник.'''
+        search_for='''"Linux". А то юзаю как чайник.'''
         toot=message_store.find_message(search_for, 'shura@mastodon.social')
         # print(toot)
         self.assertEqual(toot['id'],'104032564439980906')
@@ -410,7 +409,7 @@ https://zenrus.ru/'''
         # print(text)
         self.assertEqual(text, sample_text)
 
-    def test_process_xmpp_thread(self):
+    def test_process_xmpp_thread1(self):
         S=self
         message={
             'jid':'admin@home.myhome',
@@ -447,9 +446,46 @@ https://zenrus.ru/'''
         new_message=main.message_store.get_message_by_id('id')
         print("mentions")
         print(new_message['mentions'])
-        self.assertEqual(new_message['mentions'],'@shura@pixelfed.social ' )
+        self.assertEqual(new_message['mentions'],'@shura@pixelfed.social' )
+        
+    def test_process_xmpp_thread2(self):
+        S=self
+        message={
+            'jid':'L29Ah@qoto.org',
+            'to':'107960344422410679@mastodon.xmpp.ru',
+            'body':"> А слона-то (ссылку) я и не приметил. Но, правда, ничего не понял. :-)\nПо ссылке фото фотохромных очков, наполовину пролежавших полминуты под солнышком из окошка."
+        }
+        class myMasto:
+            def status_post(self, status, in_reply_to_id, visibility):
+                print('status=', status)
+                print('in_rely_to_id=', in_reply_to_id)
+                print('visibility=',visibility)                
+                mentions=mentions_str.split(' ')
+                mentions_ex=['']
+                S.assertEqual(mentions, mentions_ex)
+                print(mentions)
+                return {
+                    'url':'url',
+                    'id':'id',
+                }
+        m=myMasto()
+        tmp_db=MESSAGES_TEST_DB+'.bak'
+        copyfile(MESSAGES_TEST_DB, tmp_db)
+        main.message_store=MessageStore(tmp_db)
+        main.users_db = db.Db(USERS_TEST_DB)
+        main.mastodon_listeners = {
+            'shura@mastodon.social':m
+        }
+        main.process_xmpp_thread(message)
+        new_message=main.message_store.get_message_by_id('107961941922050128')
+        print(new_message)
+        print(new_message['mentions'])
+        self.assertEqual(new_message['mentions'],'@kinen@hubzilla.konzurovski.net ' )
 
     def test_quotation(self):
+        '''
+        #### Quotation test ####
+        '''
         S=self
         message={
             'jid':'admin@home.myhome',
@@ -473,11 +509,13 @@ https://zenrus.ru/'''
         main.mastodon_listeners = {
             'shura@mastodon.social':m
         }
+        print("MESSAGE")
+        print(message)
         main.process_xmpp_thread(message)
         new_message=main.message_store.get_message_by_id('id')
         print("mentions")
         print(new_message)
-        self.assertEqual(new_message['message'],"@bouncepaw@lor.sh  Saluton!\n> https://mycorrhiza.wiki\nВсе изменения в git? diff'ы читаемые?" )
+        self.assertEqual(new_message['message'],"@bouncepaw@lor.sh Saluton!\n> https://mycorrhiza.wiki\nВсе изменения в git? diff'ы читаемые?" )
 
 if __name__ == '__main__':
     unittest.main()
