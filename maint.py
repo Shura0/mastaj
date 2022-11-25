@@ -1129,7 +1129,8 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
             print("Receiver is in mentions. Ignoring update, we will receive it via notification")
             return
     net_tries = 3
-    stored_message = None;
+    stored_message = None
+    thread_id = None
     while True:
         try:
             print("search for message id", str(mes_x))
@@ -1137,6 +1138,7 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
             first_message = thread_messages[0]
             stored_message = message_store.get_message_by_id(first_message.id)
             print("thead", first_message.id)
+            thread_id = first_message.id
             break
         except mastodon_listener.NetworkError:
             print("Network error. Retry...")
@@ -1202,10 +1204,12 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                     )
     else:
         if '@' + mid in _m.mentions:
+            if not thread_id:
+                thread_id = _m.id
             for j in mastodon.jids:
                 msg = XMPP.make_message(j,
                                         _m.text,
-                                        mfrom= str(_m.id) + '@' + HOST,
+                                        mfrom= str(thread_id) + '@' + HOST,
                                         mtype='chat')
                 msg.send()
             message_store.add_message(
@@ -1216,7 +1220,8 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                     _m.visibility,
                     _m.id,
                     mid,
-                    _m.date
+                    _m.date,
+                    thread_id
                 )
         else:
             for j in mastodon.jids:
