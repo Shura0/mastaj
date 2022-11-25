@@ -5,9 +5,10 @@ import sys
 import re
 
 # sys.path.append('./venv/lib/python3.7/site-packages')
-sys.path.append('../venv/lib/python3.7/site-packages')
+sys.path.append('../venv/lib/python3.9/site-packages')
 sys.path.append('../')
-
+sys.path.append('.')
+sys.path.append('./venv/lib/python3.9/site-packages')
 import mastodon_listener
 from message_store import MessageStore
 import gxmpp
@@ -17,7 +18,7 @@ import json
 import db
 import time
 from shutil import copyfile
-import main
+import main as main
 
 
 UPDATES_FILE = 'mastodon_update.json'
@@ -86,6 +87,7 @@ class TestAll(unittest.TestCase):
                 message_store.add_message(
                     _m.text,
                     _m.url,
+                    _m.from_mid,
                     _m.mentions,
                     _m.visibility,
                     _m.id,
@@ -120,6 +122,7 @@ class TestAll(unittest.TestCase):
                     message_store.add_message(
                         _m.text,
                         _m.url,
+                        _m.from_mid,
                         _m.mentions,
                         _m.visibility,
                         _m.id,
@@ -161,31 +164,36 @@ class TestAll(unittest.TestCase):
             r=m.process_update(j)
             self.update_queue.put({'mid': MASTODON_ID, 'status': r, 'm':m})
             q.put(r)
+        
 
         with open(UPDATES_RSULT_FILE) as f:
             data=f.read()
         ju=json.loads(data)
         f.close()
+        ll=[]
         while not q.empty():
             m=q.get()
             u=ju.pop(0)
-            # print(type(m))
+
             em=mastodon_listener.EncodedMessage()
             em.text=u['text']
             em.id=u['id']
             em.url=u['url']
+            em.date=u['date']
             em.in_reply_to_id=u.get('in_reply_to_id')
             em.visibility=u['visibility']
             em.add_mentions(u['mentions'])
+            em.from_mid=u['from_mid']
             ment=em.mentions
-            self.assertEqual(m.to_dict(), em.to_dict())
+            mm=m.to_dict()
+            mm['date'] = str(mm['date'])
+            self.assertEqual(mm, em.to_dict())
             # self._p_update()
             # text=u['text']
             # print("u=")
             # print(u)
             # res=self.message_store.find_message(text, MASTODON_ID)
             # self.assertEqual(u['text'],res['message'])
-            
         
     def test_notification(self):
         with open(NOTIFICATIONS_FILE) as f:
@@ -277,6 +285,7 @@ class TestAll(unittest.TestCase):
         sample.update(['@test2@mastodon.social'])
         self.assertEqual(set(toot['mentions'].split(' ')),sample)
         toot['mentions']=toot['mentions'].split(' ')
+        toot['author']=toot['mentions'][0]
         print(*toot)
         res = message_store.add_message(**toot)
         self.assertEqual(res, None)

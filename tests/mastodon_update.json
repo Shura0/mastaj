@@ -253,7 +253,7 @@
             "bot": false,
             "followers_count": 118,
             "locked": true,
-            "created_at": "2017-11-15 05:04:25"
+            "created_at": "2017-11-15T05:04:25.000Z"
         },
         "favourites_count": 0,
         "visibility": "public",
@@ -265,13 +265,13 @@
         "emojis": [],
         "reblog": null,
         "reblogged": false,
-        "created_at": "2020-04-17 16:34:02",
+        "created_at": "2020-04-17T16:34:02.000Z",
         "sensitive": false,
         "reblogs_count": 0,
         "content": "<p>Почитал немного современной иностранной литературы. Проще говоря, выдал $1 на литжурнал.</p><p><a href=\"https://apparitionlit.com/issues/\" rel=\"nofollow noopener noreferrer\" target=\"_blank\"><span class=\"invisible\">https://</span><span class=\"\">apparitionlit.com/issues/</span><span class=\"invisible\"></span></a></p><p>Подборка историй прям огонь. Есть рассказ про женщину, которая грустит что люди перестали охотиться за сердцами (норм). Потом история про далёкий Север и жену-медведя (прям хорошо). Клюква про транс-девушку в сибирской тайге, которая влюбляется в русского дровосека (ааа это редкая фигня). Рассказ про биохакеров (норм, но не дожали). И стишки.</p>"
     }, {
         "id": 104025928332968568,
-        "created_at": "2020-04-19",
+        "created_at": "2020-04-19T00:00:00.000Z",
         "in_reply_to_id": 104019946099278342,
         "in_reply_to_account_id": 322985,
         "sensitive": false,
@@ -480,9 +480,9 @@
             "avatar": "https://files.mastodon.social/accounts/avatars/000/550/738/original/35f20d0a7c3c13c3.png",
             "last_status_at": "2020-08-11",
             "header": "https://mastodon.social/headers/original/missing.png",
-            "created_at": "2020-08-11"
+            "created_at": "2020-08-11T00:00:00.000Z"
         },
-        "created_at": "2020-08-11",
+        "created_at": "2020-08-11T00:00:00.000Z",
         "reblogged": true,
         "in_reply_to_account_id": null,
         "spoiler_text": "",
