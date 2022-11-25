@@ -6,7 +6,7 @@ import sys
 
 import threading
 
-sys.path.append('./venv/lib/python3.7/site-packages')
+sys.path.append('./venv/lib/python3.9/site-packages')
 
 import mastodon_listener
 from message_store import MessageStore
@@ -42,6 +42,7 @@ last_timeout_check_time=0
 mastodon_listeners = {}
 
 XMPP = 0
+RUN = 1
 
 def get_uniq_mids(users: list) -> dict:
     mu = {}
@@ -68,25 +69,28 @@ async def process_update(event):
         asyncio.current_task().set_name('process_update')
     except Exception as e:
         print(e)
-    while 1:
+    while RUN:
         try:
             # print("pu")
             message = update_queue.get(block=False)
-            print(datetime.datetime.now().isoformat())
+            print(datetime.datetime.now().astimezone().replace(microsecond=0).isoformat())
             print("update queue is not empty")
             _m = message['status']
             print("mid:", message['mid'])
             print(_m.mentions)
             print("mentions:", _m.mentions)
-            # TODO: Rewrite this
-            # Done
             print("from:", _m.from_mid)
             print("mid:", message['mid'])
             if _m.in_reply_to_id:
                 print("reply to", _m.in_reply_to_id)
-                if _m.from_mid != message['mid']: # not our own message
+                if '@' + message['mid'] in _m.mentions:
+                    print ("Undo update. We will receive it via notification")
+                    continue
+                if _m.from_mid != '@' + message['mid']: # not our own message
                     t = threading.Thread(target=_mastodon_process_reply_process, args=(message['mid'], _m.id, _m))
                     t.start()
+                else:
+                    print("Got own message. Ignoring")
             else:
                 print("passed to xmpp")
                 for j in message['m'].jids:
@@ -98,10 +102,12 @@ async def process_update(event):
                     message_store.add_message(
                         _m.text,
                         _m.url,
+                        _m.from_mid,
                         _m.mentions,
                         _m.visibility,
                         _m.id,
-                        message['mid']
+                        message['mid'],
+                        _m.date
                     )
                 # autobost processing
                 try:
@@ -127,7 +133,8 @@ async def process_update(event):
             print("unhandled exception")
         # print('.', end='')
         await asyncio.sleep(0.2)
-    print("Main process_update is died")
+    print(asyncio.current_task().get_name(),
+        'is closed')
 
 
 async def process_notification(event):
@@ -136,7 +143,7 @@ async def process_notification(event):
     except Exception as e:
         print(e)
     # asyncio.current_task().set_name('process_notofication')
-    while 1:
+    while RUN:
         try:
             # print("pn")
             message = notification_queue.get(block=False)
@@ -158,10 +165,12 @@ async def process_notification(event):
                         message_store.add_message(
                             _m.text,
                             _m.url,
+                            _m.from_mid,
                             _m.mentions,
                             _m.visibility,
                             _m.id,
                             message['mid'],
+                            _m.date,
                             _m.id
                         )
                         for j in message['m'].jids:
@@ -203,6 +212,8 @@ async def process_notification(event):
             print("Exception", e)
         # print('process_notification')
         await asyncio.sleep(.2)
+    print(asyncio.current_task().get_name(),
+        'is closed')
 
 
 def process_xmpp_home(message):
@@ -534,18 +545,19 @@ def process_xmpp_thread(message):
                     print(messages)
                     message_id = messages[0]
                     answer = body
+                print("original message_id", message_id)
                 last_message = message_store.get_message_by_id(message_id)
+                print(last_message)
                 mentions = last_message['mentions'].lower().split(' ')
                 author = ''
                 try:
                     author = mentions.pop(0)
-                    if author == '@' + user['mid'].lower():
-                        author = ''
+                    while mentions.count(author):
+                        mentions.remove(author)
                     while mentions.count('@' + user['mid'].lower()):
                         mentions.remove('@' + user['mid'].lower())
-                    if author:
-                        while mentions.count(author):
-                            mentions.remove(author)
+                    if author == '@' + user['mid'].lower():
+                        author = ''
                 except ValueError:
                     pass
                 if len(answer) > 2:
@@ -836,14 +848,43 @@ def process_xmpp_config(message):
                     mfrom='config@' + HOST,
                     mtype='chat')
                 msg.send()
-            elif body == 'restart' and user['jid'] == ADMIN_JID:
-                exit(0)
+            elif body == 'users' and user['jid'] == ADMIN_JID:
+                message_text=''
+                for k,v in mastodon_listeners.items():
+                    if v.stream and v.stream.is_alive():
+                        message_text = message_text + k + '\n'
+                msg = XMPP.make_message(
+                    message['jid'],
+                    message_text,
+                    mfrom='config@' + HOST,
+                    mtype='chat')
+                msg.send()
+            elif body == 'stop' and user['jid'] == ADMIN_JID:
+                global RUN
+                RUN = 0
+                for k, v in mastodon_listeners.items():
+                    v.close_listener()
+                msg = XMPP.make_message(
+                    message['jid'],
+                    "Bye",
+                    mfrom='config@' + HOST,
+                    mtype='chat')
+                msg.send()
+                # XMPP.send_offline()
+                # XMPP.disconnect()
+            elif body == 'threads' and user['jid'] == ADMIN_JID:
+                msg = XMPP.make_message(
+                    message['jid'],
+                    str(threading.active_count()),
+                    mfrom='config@' + HOST,
+                    mtype='chat')
+                msg.send()
 
 
 async def process_xmpp(event):
     asyncio.current_task().set_name('process_xmpp')
     print("process xmpp")
-    while 1:
+    while RUN:
         try:
             # print("px")
             message = xmpp_queue.get(block=False)
@@ -920,11 +961,13 @@ async def process_xmpp(event):
                 mfrom=message['to'])
             msg.send()
         await asyncio.sleep(.2)
+    print(asyncio.current_task().get_name(),
+        'is closed')
 
 
 async def check_timeout(event):
     asyncio.current_task().set_name('check_timeout')
-    while 1:
+    while RUN:
         tasks = asyncio.all_tasks()
         if len(tasks) < 4:
             for t in tasks:
@@ -944,6 +987,8 @@ async def check_timeout(event):
             except Exception as e:
                 print(e)
         await asyncio.sleep(2)
+    print(asyncio.current_task().get_name(),
+        'is closed')
 
 
 def disconnected(s):
@@ -951,13 +996,16 @@ def disconnected(s):
     exit(1)
 
 def process_process():
-    while True:
+    while RUN:
         for k,v in mastodon_listeners.items():
-            if not v.stream.is_alive():
+            if v.stream and ( not v.stream.is_alive() ):
                 print("I see a stream is not alive")
                 sleep(2)
                 v.create_listener(update_queue, notification_queue)
         sleep(2)
+    XMPP.send_offline(ADMIN_JID)
+    XMPP.disconnect()
+    print('process_process is closed')
 
 def mastodon_processor(login, v):
     print("mastodon processor")
@@ -1070,24 +1118,42 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
     if not mastodon:
         return
     _m = message
-    if _m.type == 'mention' and tp == 'update': # we will receive it via notification again
-        print("Not for update handler. Returning")
-        return
-    try:
-        thread_messages = mastodon.get_thread(mes_x)
-        first_message = thread_messages[0]
-        stored_message = message_store.get_message_by_id(first_message.id)
-    except mastodon_listener.NetworkError:
-        print("Network error. Abort")
-        print(mes_x)
-        print(HOST)
-        return
-    except mastodon_listener.NotFoundError:
-        print("not found", _m.in_reply_to_id)
+    if tp == 'update': 
+        print("update")
+        print("mid:", mid)
+        print("type", _m.type)
+        if _m.type == 'mention': # we will receive it via notification again
+            print("Not for update handler. Returning")
+            return
+        if mid in _m.mentions:
+            print("Receiver is in mentions. Ignoring update, we will receive it via notification")
+            return
+    net_tries = 3
+    stored_message = None;
+    while True:
+        try:
+            print("search for message id", str(mes_x))
+            thread_messages = mastodon.get_thread(mes_x)
+            first_message = thread_messages[0]
+            stored_message = message_store.get_message_by_id(first_message.id)
+            print("thead", first_message.id)
+            break
+        except mastodon_listener.NetworkError:
+            print("Network error. Retry...")
+            print(mes_x)
+            print(HOST)
+            net_tries -= 1
+            if net_tries < 1:
+                print("Network error. Abort...")
+                print(mes_x)
+                print(HOST)
+                return
+        except mastodon_listener.NotFoundError:
+            print("not found", str(mex_x))
+            break
 
     print("Process_reply")
-    print(_m)
-    print("search for message id")
+    print(_m.to_dict())
     if stored_message:
         print("found")
         # message_store.update_mentions(first_message.id,_m.mentions)
@@ -1105,10 +1171,12 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
             message_store.add_message(
                     _m.text,
                     _m.url,
+                    _m.from_mid,
                     _m.mentions,
                     _m.visibility,
                     _m.id,
                     mid,
+                    _m.date,
                     first_message.id
                 )
         else:
@@ -1125,26 +1193,30 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                     message_store.add_message(
                         _m.text,
                         _m.url,
+                        _m.from_mid,
                         _m.mentions,
                         _m.visibility,
                         _m.id,
-                        mid
+                        mid,
+                        _m.date
                     )
     else:
         if '@' + mid in _m.mentions:
             for j in mastodon.jids:
                 msg = XMPP.make_message(j,
                                         _m.text,
-                                        mfrom=_m.id + '@' + HOST,
+                                        mfrom= str(_m.id) + '@' + HOST,
                                         mtype='chat')
                 msg.send()
             message_store.add_message(
                     _m.text,
                     _m.url,
+                    _m.from_mid,
                     _m.mentions,
                     _m.visibility,
                     _m.id,
-                    mid
+                    mid,
+                    _m.date
                 )
         else:
             for j in mastodon.jids:
@@ -1159,10 +1231,12 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                     message_store.add_message(
                         _m.text,
                         _m.url,
+                        _m.from_mid,
                         _m.mentions,
                         _m.visibility,
                         _m.id,
-                        mid
+                        mid,
+                        _m.date
                     )
     
 def mastodon_get_thread_process(jid, mes_x):
@@ -1198,14 +1272,17 @@ def mastodon_get_thread_process(jid, mes_x):
         return
     message_store = MessageStore(MESSAGES_DB)
     for _m in thread_messages:
-        print(_m)
+        print(_m.to_dict())
+        #_m.mentions.remove(_m.from_mid)
         message_store.add_message(
             _m.text,
             _m.url,
+            _m.from_mid,
             _m.mentions,
             _m.visibility,
             _m.id,
             user['mid'],
+            _m.date,
             thread_messages[0].id
         )
         msg = XMPP.make_message(
@@ -1225,39 +1302,52 @@ def mastodon_post_status_process(jid, in_reply_to_id, status, visibility):
         return
     try:
         if in_reply_to_id:
-            toot = mastodon.status_post(status=status, in_reply_to_id=in_reply_to_id, visibility=visibility)
             message_store = MessageStore(MESSAGES_DB)
             last_message = message_store.get_message_by_id(in_reply_to_id)
+            feed = last_message.get('feed','home')
             mentions = last_message['mentions'].lower().split(' ')
+            print('last_messsage')
+            print(last_message)
             author = ''
             try:
-                author = mentions.pop(0) + ' '  # Space is matter!
-                if author == '@' + user['mid'].lower():
-                    author = ''
+                # author = mentions.pop(0) + ' '  # Space is matter!
+                # if author == '@' + user['mid'].lower():
+                #     author = ''
                 while mentions.count('@' + user['mid'].lower()):
                     mentions.remove('@' + user['mid'].lower())
             except ValueError:
                 pass
-            mentions.append(author)
+            # mentions.append(author)
+            toot = mastodon.status_post(status=status, in_reply_to_id=in_reply_to_id, visibility=visibility)
             message_store.add_message(
                 status,
                 toot['url'],
+                '@' + user['mid'].lower(),
                 mentions,
                 visibility,
                 toot['id'],
                 user['mid'],
-                in_reply_to_id
+                toot['created_at'],
+                feed
             )
         else:
             mastodon.status_post(status=status, visibility=visibility)
     except mastodon_listener.NetworkError:
         print("error in main")
         print(jid)
-        msg = XMPP.make_message(
-            jid,
-            "Network error",
-            mtype='chat',
-            mfrom='new@' + HOST)
+        if in_reply_to_id:
+            feed = last_message.get('feed','new')
+            msg = XMPP.make_message(
+                jid,
+                "Cannot send post, network error.",
+                mtype='chat',
+                mfrom=feed + '@' + HOST)
+        else:    
+            msg = XMPP.make_message(
+                jid,
+                "Cannot send post, network error",
+                mtype='chat',
+                mfrom='new@' + HOST)
         msg.send()
     except mastodon_listener.APIError as e:
         msg = XMPP.make_message(
@@ -1308,7 +1398,7 @@ if __name__ == '__main__':
     users = users_db.get_users()  # {jid, mid, token}
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop = asyncio.get_event_loop()
+    # loop = asyncio.get_event_loop()
     XMPP = gxmpp.Component(xmpp_jid, xmpp_password, xmpp_server, xmpp_port)
     XMPP.add_users(users)
     XMPP.attach_queue(xmpp_queue)
@@ -1342,12 +1432,12 @@ if __name__ == '__main__':
     t = threading.Thread(target=process_process, name="process_process")
     t.start()
     MTHREADS.append(t)
-    try:
-        loop.run_until_complete(XMPP.disconnected)
-    finally:
-        loop.close()
-        asyncio.set_event_loop(None)
+    #try:
+    loop.run_until_complete(XMPP.disconnected)
     print("end loop")
+    #finally:
+        #loop.stop()
+        #asyncio.set_event_loop(None)
     #XMPP.process()
 
 # if __name__ == '__main__':
