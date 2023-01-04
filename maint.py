@@ -9,7 +9,8 @@ import threading
 sys.path.append('./venv/lib/python3.9/site-packages')
 
 import mastodon_listener
-from message_store import MessageStore
+from mysql_store import MessageStore
+from sqlite_store import MessageStore as SqliteStore
 from queue import Empty, Queue
 from mastodon_listener import MastodonUser
 # import command_parser
@@ -33,6 +34,21 @@ xmpp_server = config.XMPP_SERVER
 xmpp_port = config.XMPP_PORT
 xmpp_queue = 0
 
+try:
+    MYSQL_HOST = config.MYSQL_HOST
+    MYSQL_PORT = config.MYSQL_PORT
+    MYSQL_DATABASE = config.MYSQL_DATABASE
+    MYSQL_USERNAME = config.MYSQL_USERNAME
+    MYSQL_PASSWORD = config.MYSQL_PASSWORD
+    USE_MYSQL = config.USE_MYSQL
+except AttributeError:
+    MYSQL_HOST = None
+    MYSQL_PORT = None
+    MYSQL_DATABASE = None
+    MYSQL_USERNAME = None
+    MYSQL_PASSWORD = None
+    USE_MYSQL = False
+
 ADMIN_JID = config.ADMIN_JID
 
 notification_queue = Queue()
@@ -41,8 +57,16 @@ xmpp2m_queue = Queue()
 last_timeout_check_time=0
 mastodon_listeners = {}
 
+TEST_MODE=0
 XMPP = 0
 RUN = 1
+# MTHREADS=[]
+
+def getMessageStore():
+    if USE_MYSQL:
+        return MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    else:
+        return SqliteStore(MESSAGES_DB)
 
 def get_uniq_mids(users: list) -> dict:
     mu = {}
@@ -125,14 +149,13 @@ async def process_update(event):
                 except Exception as e:
                     print(str(e))
         except Empty:
-            # print('e', end='')
-            pass
+            await asyncio.sleep(0.2)
+            # pass
         except Exception as e:
             print("Exception: \n" + srt(e))
         except:
             print("unhandled exception")
         # print('.', end='')
-        await asyncio.sleep(0.2)
     print(asyncio.current_task().get_name(),
         'is closed')
 
@@ -207,11 +230,11 @@ async def process_notification(event):
                         mfrom='home@' + HOST)
                     msg.send()
         except Empty:
-            pass
+            await asyncio.sleep(.2)
+            # pass
         except Exception as e:
             print("Exception", e)
         # print('process_notification')
-        await asyncio.sleep(.2)
     print(asyncio.current_task().get_name(),
         'is closed')
 
@@ -421,6 +444,7 @@ def process_xmpp_thread(message):
         t.start()
         # MTHREADS.append(t)
     elif body.upper() == 'W':  # Get link
+        message_store = getMessageStore()
         # TODO: change dict to EncodedMessage type
         toot = message_store.get_message_by_id(mid)
         if not toot:
@@ -471,6 +495,7 @@ def process_xmpp_thread(message):
     #             mfrom='home@'+HOST)
     #         msg.send()
     elif body.upper() == 'M':
+        message_store = getMessageStore()
         messages = message_store.get_messages_for_user_by_thread(
             user['mid'],
             mid
@@ -505,7 +530,10 @@ def process_xmpp_thread(message):
             'Post answer to desired status\n\n' +
             '> quotation\n' +
             'f\n' +
-            'favourite quoted post\n'
+            'favourite quoted post\n' +
+            '> quotation\n' +
+            'r\n' +
+            'reblog quoted post\n'
             ,
             mfrom=str(mid) + '@' + HOST,
             mtype='chat')
@@ -513,6 +541,7 @@ def process_xmpp_thread(message):
     else:
         if len(body) > 2:  # Answer to post
             message_id = 0
+            message_store = getMessageStore()
             if re.match(r'(?:>|»)', body, re.I | re.MULTILINE):  # quotation
                 print("quotation in thread")
                 strings = body.split('\n')
@@ -529,7 +558,7 @@ def process_xmpp_thread(message):
                 print('Original post was:')
                 original_post=original_post.rstrip()
                 print('"'+original_post+'"')
-                toot = message_store.find_message(original_post, user['mid'], feed=str(mid))
+                toot = message_store.find_message(original_post, user['mid'], feed=mid)
                 if not toot:
                     raise mastodon_listener.NotFoundError()
                 message_id = toot['id']
@@ -565,11 +594,15 @@ def process_xmpp_thread(message):
                     mentions_str = (' '.join(mentions)).strip()
                     print("Answer from " + user['mid'])
                     print("Mentions: '" + mentions_str + "'")
+                    if author:
+                        answer = author + ' ' + answer
+                    if mentions_str:
+                        answer = answer + '\n' + mentions_str
                     t = threading.Thread(
                         target=mastodon_post_status_process, args=(
                             message['jid'],
                             message_id, # in_reply_to_id
-                            author + ' ' + answer + ' \n' + mentions_str,
+                            answer,
                             last_message['visibility']
                             ),
                         name='mastodon_reblog_'+message['jid']
@@ -803,6 +836,7 @@ def process_xmpp_config(message):
                     if q:
                         print("got mid")
                         for a in q.groups():
+                            a = '@' + a
                             print(a)
                             if a not in l:
                                 if a:
@@ -950,7 +984,7 @@ async def process_xmpp(event):
                 mfrom=message['to'])
             msg.send()
         except Empty:
-            pass
+            await asyncio.sleep(.2)
             
         except Exception as e:
             print(str(e))
@@ -960,7 +994,6 @@ async def process_xmpp(event):
                 mtype='chat',
                 mfrom=message['to'])
             msg.send()
-        await asyncio.sleep(.2)
     print(asyncio.current_task().get_name(),
         'is closed')
 
@@ -1114,7 +1147,9 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
     #if not user:
     #    return
     mastodon = mastodon_listeners.get(mid)
-    message_store = MessageStore(MESSAGES_DB)
+    #message_store = MessageStore(MESSAGES_DB)
+    #message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    message_store = getMessageStore()
     if not mastodon:
         return
     _m = message
@@ -1131,10 +1166,14 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
     net_tries = 3
     stored_message = None
     thread_id = None
+    if _m.in_reply_to_id:
+        search_for = _m.in_reply_to_id
+    else:
+        search_for = mes_x
     while True:
         try:
-            print("search for message id", str(mes_x))
-            thread_messages = mastodon.get_thread(mes_x)
+            print("search for message id", str(search_for))
+            thread_messages = mastodon.get_thread(search_for)
             first_message = thread_messages[0]
             stored_message = message_store.get_message_by_id(first_message.id)
             print("thead", first_message.id)
@@ -1151,7 +1190,7 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                 print(HOST)
                 return
         except mastodon_listener.NotFoundError:
-            print("not found", str(mex_x))
+            print("not found", str(search_for))
             break
 
     print("Process_reply")
@@ -1162,7 +1201,7 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
         # mentions_str = stored_message['mentions']
         # mentions = set(mentions_str.split(' '))
         mentions = _m.mentions
-        if '@' + mid in _m.mentions:
+        if '@' + mid in _m.mentions or ((stored_message['mentions'].split(' '))[0] == '@'+mid):
             print("answer to known message")
             for j in mastodon.jids:
                 msg = XMPP.make_message(j,
@@ -1202,6 +1241,8 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                         mid,
                         _m.date
                     )
+                else:
+                    print("Reply will not be delivered. Reply delivery is disabled")
     else:
         if '@' + mid in _m.mentions:
             if not thread_id:
@@ -1275,7 +1316,9 @@ def mastodon_get_thread_process(jid, mes_x):
             mfrom=str(thread_messages[0].id) + '@' + HOST)
         msg.send()
         return
-    message_store = MessageStore(MESSAGES_DB)
+    # message_store = MessageStore(MESSAGES_DB)
+    # message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    message_store = getMessageStore()
     for _m in thread_messages:
         print(_m.to_dict())
         #_m.mentions.remove(_m.from_mid)
@@ -1307,12 +1350,16 @@ def mastodon_post_status_process(jid, in_reply_to_id, status, visibility):
         return
     try:
         if in_reply_to_id:
-            message_store = MessageStore(MESSAGES_DB)
+            message_store = getMessageStore()
+            #message_store = SqliteStore(MESSAGES_DB)
+            #message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
             last_message = message_store.get_message_by_id(in_reply_to_id)
-            feed = last_message.get('feed','home')
-            mentions = last_message['mentions'].lower().split(' ')
-            print('last_messsage')
-            print(last_message)
+            mentions=[]
+            if last_message:
+                feed = last_message.get('feed','home')
+                mentions = last_message['mentions'].lower().split(' ')
+                print('last_messsage')
+                print(last_message)
             author = ''
             try:
                 # author = mentions.pop(0) + ' '  # Space is matter!
@@ -1399,7 +1446,9 @@ if __name__ == '__main__':
 #def xmpp_processor(xmpp_queue):
     xmpp_queue = Queue()
     users_db = db.Db(USERS_DB)
-    message_store = MessageStore(MESSAGES_DB)
+    # message_store = MessageStore(MESSAGES_DB)
+    # message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    message_store = getMessageStore()
     users = users_db.get_users()  # {jid, mid, token}
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

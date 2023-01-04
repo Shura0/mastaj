@@ -160,6 +160,8 @@ class MastodonListener(StreamListener):
             m.in_reply_to_id = cont['in_reply_to_id']
         # return m
         # self.update_q.put({'mid': self.mid, 'status': m})
+        s = re.sub(r"\s+\n","\n", m.text).rstrip()
+        m.text = s
         self.lastbeat = int(time())
         return m
 
@@ -247,11 +249,11 @@ class MastodonListener(StreamListener):
             for u in media_list:
                 to_out += "\n" + u['url']
         elif data['type'] == 'follow_request':
-            to_out = "@{} wants to follow you:\n{}".format(
+            to_out = "@{} wants follow you:\n{}".format(
                 data['account']['acct'],
                 data['account']['url'])
 
-        m.text = to_out
+        m.text = re.sub(r"\s+\n","\n", to_out).rstrip()
         return m
         # self.message_q.put({'mid': self.mid, 'status': m})
 
@@ -282,7 +284,7 @@ class MastodonUser:
                 self.mastodon = Mastodon(
                     access_token=access_token,
                     api_base_url='https://' + host,
-                    request_timeout=10
+                    request_timeout=20
                 )
             except MastodonNetworkError as e:
                 print(str(e))
@@ -352,21 +354,25 @@ class MastodonUser:
         # # mq.putMessage("m:" + self.mid, status_json)
         # def process_notification(data:dict, mastodon_id: str) -> str:
 
-    def get_thread(self, id):
+    def get_thread(self, message_id):
         mymessages = []
         if id == 0:
             return mymessages
         try:
-            toot = self.mastodon.status(id)
-            thread = self.mastodon.status_context(id)
+            toot = self.mastodon.status(message_id)
+            thread = self.mastodon.status_context(message_id)
             mentions = set()
-            start_id = id
+            start_id = message_id
         except (MastodonNetworkError, exceptions.ConnectionError):
             print("network error for " + str(self.mastodon_id))
             raise NetworkError()
             return []
-        except:
+        except MastodonNotFoundError as e:
+            print(e)
             raise NotFoundError()
+            return []
+        except Exception as e:
+            print(e)
             return []
         if len(thread['ancestors']) > 0:
             start_id = thread['ancestors'][0]['id']

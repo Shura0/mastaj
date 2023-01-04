@@ -59,12 +59,7 @@ class MessageStore:
         if res:
             return None
         sql = "INSERT INTO 'Messages' (date, url, mentions, message, visibility, id, mid, feed) VALUES (?, ?, ?, ?, ?, ?, ?, ?);"
-
-        if date:
-            d = date.replace(microsecond=0).isoformat()
-        else:
-            d = datetime.utcnow().replace(
-                tzinfo=datetime.timezone.utc).replace(microsecond=0).isoformat()
+        d = date.replace(microsecond=0).isoformat()
         params = (d,
                   url,
                   mentions_str,
@@ -99,23 +94,7 @@ class MessageStore:
             return a[-1]
         return None
 
-    def update_mentions(self, id, mentions):
-        sql = "SELECT mentions FROM 'Messages' WHERE id =(?)"
-        self.cursor.execute(sql, (str(id),))
-        m = self.cursor.fetchone()
-
-        if m:
-            m = m.get('mentions')
-            mset = set(m.split(' '))
-            mset.update(mentions)
-        else:
-            mset = mentions
-
-        mentions_str = " ".join(mset)
-        sql = "UPDATE 'Messages' SET mentions = (?) WHERE id =(?)"
-        self.cursor.execute(sql, [mentions_str, str(id)])
-        self.db.commit()
-
+    
     def get_message_by_id(self, id: str):
         sql = "SELECT * FROM 'Messages' WHERE id = (?)"
         self.cursor.execute(sql, [str(id)])
