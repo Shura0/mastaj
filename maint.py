@@ -54,19 +54,21 @@ ADMIN_JID = config.ADMIN_JID
 notification_queue = Queue()
 update_queue = Queue()
 xmpp2m_queue = Queue()
-last_timeout_check_time=0
+last_timeout_check_time = 0
 mastodon_listeners = {}
 
-TEST_MODE=0
+TEST_MODE = 0
 XMPP = 0
 RUN = 1
 # MTHREADS=[]
+
 
 def getMessageStore():
     if USE_MYSQL:
         return MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
     else:
         return SqliteStore(MESSAGES_DB)
+
 
 def get_uniq_mids(users: list) -> dict:
     mu = {}
@@ -108,9 +110,9 @@ async def process_update(event):
             if _m.in_reply_to_id:
                 print("reply to", _m.in_reply_to_id)
                 if '@' + message['mid'] in _m.mentions:
-                    print ("Undo update. We will receive it via notification")
+                    print("Undo update. We will receive it via notification")
                     continue
-                if _m.from_mid != '@' + message['mid']: # not our own message
+                if _m.from_mid != '@' + message['mid']:  # not our own message
                     t = threading.Thread(target=_mastodon_process_reply_process, args=(message['mid'], _m.id, _m))
                     t.start()
                 else:
@@ -138,10 +140,10 @@ async def process_update(event):
                     print("autoboost processing")
                     for j in message['m'].jids:
                         print("for " + str(j))
-                        l = users_db.getAutoboostByJid(j)
-                        print("autoboost names:\n" + str(l))
+                        line = users_db.getAutoboostByJid(j)
+                        print("autoboost names:\n" + str(line))
                         print("post from " + str(_m.from_mid))
-                        if _m.from_mid.lower() in l:
+                        if _m.from_mid.lower() in line:
                             print("got reblog")
                             mastodon = mastodon_listeners.get(message['mid'])
                             if mastodon:
@@ -152,12 +154,9 @@ async def process_update(event):
             await asyncio.sleep(0.2)
             # pass
         except Exception as e:
-            print("Exception: \n" + srt(e))
-        except:
-            print("unhandled exception")
+            print("Exception: \n" + str(e))
         # print('.', end='')
-    print(asyncio.current_task().get_name(),
-        'is closed')
+    print(asyncio.current_task().get_name(), 'is closed')
 
 
 async def process_notification(event):
@@ -176,7 +175,6 @@ async def process_notification(event):
             print(_m.to_dict())
             print("====\n\n\n")
             if _m.type == 'mention':
-                ok = 1
                 if _m.in_reply_to_id:
                     print("reply to id:", _m.in_reply_to_id)
                     t = threading.Thread(target=_mastodon_process_reply_process, args=(message['mid'], _m.id, _m, 'notification'))
@@ -235,8 +233,7 @@ async def process_notification(event):
         except Exception as e:
             print("Exception", e)
         # print('process_notification')
-    print(asyncio.current_task().get_name(),
-        'is closed')
+    print(asyncio.current_task().get_name(), 'is closed')
 
 
 def process_xmpp_home(message):
@@ -250,8 +247,7 @@ def process_xmpp_home(message):
         print("not mastodon")
         msg = XMPP.make_message(
             message['jid'],
-            'Seems like you have not registered or internal exception accured'
-            ,
+            'Seems like you have not registered or internal exception accured',
             mfrom='home@' + HOST,
             mtype='chat')
         msg.send()
@@ -310,7 +306,10 @@ You cannot write new messages in this chat. To make new massage please send it t
             raise mastodon_listener.NotFoundError()
         mes_x = ms[h_id]
         print("Got message! mid=", mes_x)
-        t = threading.Thread(target=mastodon_get_thread_process, args=(message['jid'],mes_x), name='mastodon_getthread_'+message['jid'])
+        t = threading.Thread(
+            target=mastodon_get_thread_process,
+            args=(message['jid'], mes_x),
+            name='mastodon_getthread_' + message['jid'])
         t.start()
         # MTHREADS.append(t)
     elif re.match(r'r(\d{1,2})?$', body, re.I | re.MULTILINE):
@@ -323,7 +322,10 @@ You cannot write new messages in this chat. To make new massage please send it t
         if h_id >= len(ms):
             raise mastodon_listener.NotFoundError()
         mes_x = ms[h_id]
-        t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('r', message['jid'],mes_x), name='mastodon_reblog_'+message['jid'])
+        t = threading.Thread(
+            target=mastodon_reblog_fav_status_process,
+            args=('r', message['jid'], mes_x),
+            name='mastodon_reblog_' + message['jid'])
         t.start()
         # MTHREADS.append(t)
     elif re.match(r'f(\d{1,2})?$', body, re.I | re.MULTILINE):
@@ -336,7 +338,10 @@ You cannot write new messages in this chat. To make new massage please send it t
         if h_id >= len(ms):
             raise mastodon_listener.NotFoundError()
         mes_x = ms[h_id]
-        t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('f', message['jid'],mes_x), name='mastodon_reblog_'+message['jid'])
+        t = threading.Thread(
+            target=mastodon_reblog_fav_status_process,
+            args=('f', message['jid'], mes_x),
+            name='mastodon_reblog_' + message['jid'])
         t.start()
         # MTHREADS.append(t)
     elif re.match(r'w(\d{1,2})?$', body, re.I | re.MULTILINE):
@@ -362,12 +367,12 @@ You cannot write new messages in this chat. To make new massage please send it t
         print(strings)
         original_post = ''
         while len(strings) > 0:
-            l = strings.pop(0)
-            q = re.search(r'(?:>|») ?(.+)', l)
+            line = strings.pop(0)
+            q = re.search(r'(?:>|») ?(.+)', line)
             if q and q.group(1):
                 original_post += q.group(1) + '\n'
             else:
-                strings.append(l)  # return a string back
+                strings.append(line)  # return a string back
                 break  # end of quotation
         print('Original post was:')
         original_post = original_post.rstrip()
@@ -380,15 +385,24 @@ You cannot write new messages in this chat. To make new massage please send it t
         print("command:" + command)
         print("message id:" + message_id)
         if command == '.' or command == '':  # get thread
-            t = threading.Thread(target=mastodon_get_thread_process, args=(message['jid'],message_id), name='mastodon_getthread_'+message['jid'])
+            t = threading.Thread(
+                target=mastodon_get_thread_process,
+                args=(message['jid'], message_id),
+                name='mastodon_getthread_' + message['jid'])
             t.start()
             # MTHREADS.append(t)
         elif command.lower() == 'r':  # reblog status
-            t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('r', message['jid'],message_id), name='mastodon_reblog_'+message['jid'])
+            t = threading.Thread(
+                target=mastodon_reblog_fav_status_process,
+                args=('r', message['jid'], message_id),
+                name='mastodon_reblog_' + message['jid'])
             t.start()
             # MTHREADS.append(t)
         elif command.lower() == 'f':  # favourite status
-            t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('f', message['jid'],message_id), name='mastodon_reblog_'+message['jid'])
+            t = threading.Thread(
+                target=mastodon_reblog_fav_status_process,
+                args=('f', message['jid'], message_id),
+                name='mastodon_reblog_' + message['jid'])
             t.start()
             # MTHREADS.append(t)
         elif command.lower() == 'w':  # get link
@@ -417,16 +431,13 @@ def process_xmpp_new(message):
         return
     body = message['body']
     t = threading.Thread(
-        target=mastodon_post_status_process, args=(
-            message['jid'],
-            0, # in_reply_to_id
-            body,
-            'public' #visibility
-            ),
-        name='mastodon_post_'+message['jid']
-        )
+        target=mastodon_post_status_process,
+        args=(message['jid'], 0, body, 'public'),
+        name='mastodon_post_' + message['jid']
+    )
     t.start()
     # MTHREADS.append(t)
+
 
 def process_xmpp_thread(message):
     user = users_db.get_user_by_jid(message['jid'])
@@ -440,7 +451,10 @@ def process_xmpp_thread(message):
     body = message['body']
     if body == '.':
         print("get thread")
-        t = threading.Thread(target=mastodon_get_thread_process, args=(message['jid'],mid), name='mastodon_getthread_'+message['jid'])
+        t = threading.Thread(
+            target=mastodon_get_thread_process,
+            args=(message['jid'], mid),
+            name='mastodon_getthread_' + message['jid'])
         t.start()
         # MTHREADS.append(t)
     elif body.upper() == 'W':  # Get link
@@ -467,7 +481,7 @@ def process_xmpp_thread(message):
                     mfrom=str(mid) + '@' + HOST,
                     mtype='chat')
             msg.send()
-        except:
+        except Exception:
             e = sys.exc_info()[0]
             print(str(e))
             msg = XMPP.make_message(
@@ -479,8 +493,11 @@ def process_xmpp_thread(message):
     elif body.upper() == 'RR':  # Reblog first message
         # toot=message_store.get_message_by_id(mid)
         # if not toot:
-            # toot=mastodon.get_status(mid)
-        t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('r', message['jid'],mid), name='mastodon_reblog_'+message['jid'])
+        # toot=mastodon.get_status(mid)
+        t = threading.Thread(
+            target=mastodon_reblog_fav_status_process,
+            args=('r', message['jid'], mid),
+            name='mastodon_reblog_' + message['jid'])
         t.start()
         # MTHREADS.append(t)
         # in some cases we do not have last message in our base. For example if we get thread by .
@@ -507,12 +524,12 @@ def process_xmpp_thread(message):
         mentions = last_message['mentions'].lower().split(' ')
         mentions_str = '\n'.join(mentions)
         mentions_str = "All mentions:\n" + mentions_str
-        mentions_str.rstrip();
+        mentions_str.rstrip()
         msg = XMPP.make_message(
-                        message['jid'],
-                        mentions_str,
-                        mtype='chat',
-                        mfrom=str(mid) + '@' + HOST)
+            message['jid'],
+            mentions_str,
+            mtype='chat',
+            mfrom=str(mid) + '@' + HOST)
         msg.send()
     elif body.upper() == 'H':  # Get help
         msg = XMPP.make_message(
@@ -533,8 +550,7 @@ def process_xmpp_thread(message):
             'favourite quoted post\n' +
             '> quotation\n' +
             'r\n' +
-            'reblog quoted post\n'
-            ,
+            'reblog quoted post\n',
             mfrom=str(mid) + '@' + HOST,
             mtype='chat')
         msg.send()
@@ -548,16 +564,16 @@ def process_xmpp_thread(message):
                 print(strings)
                 original_post = ''
                 while len(strings) > 0:
-                    l = strings.pop(0)
-                    q = re.search(r'(?:>|») ?(.+)', l)
+                    line = strings.pop(0)
+                    q = re.search(r'(?:>|») ?(.+)', line)
                     if q and q.group(1):
                         original_post += q.group(1) + '\n'
                     else:
-                        strings.insert(0,l)  # return a string back
+                        strings.insert(0, line)  # return a string back
                         break  # end of quotation
                 print('Original post was:')
-                original_post=original_post.rstrip()
-                print('"'+original_post+'"')
+                original_post = original_post.rstrip()
+                print('"' + original_post + '"')
                 toot = message_store.find_message(original_post, user['mid'], feed=mid)
                 if not toot:
                     raise mastodon_listener.NotFoundError()
@@ -590,7 +606,7 @@ def process_xmpp_thread(message):
                 except ValueError:
                     pass
                 if len(answer) > 2:
-                    #mentions.append(author)
+                    # mentions.append(author)
                     mentions_str = (' '.join(mentions)).strip()
                     print("Answer from " + user['mid'])
                     print("Mentions: '" + mentions_str + "'")
@@ -601,28 +617,34 @@ def process_xmpp_thread(message):
                     t = threading.Thread(
                         target=mastodon_post_status_process, args=(
                             message['jid'],
-                            message_id, # in_reply_to_id
+                            message_id,  # in_reply_to_id
                             answer,
                             last_message['visibility']
-                            ),
-                        name='mastodon_reblog_'+message['jid']
-                        )
+                        ),
+                        name='mastodon_reblog_' + message['jid']
+                    )
                     t.start()
                     # MTHREADS.append(t)
                 else:
                     if answer.upper() == 'W':
                         msg = XMPP.make_message(
-                                        message['jid'],
-                                        toot['url'],
-                                        mtype='chat',
-                                        mfrom=str(mid) + '@' + HOST)
+                            message['jid'],
+                            toot['url'],
+                            mtype='chat',
+                            mfrom=str(mid) + '@' + HOST)
                         msg.send()
                     elif answer.lower() == 'r':  # reblog status
-                        t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('r', message['jid'],message_id), name='mastodon_reblog_'+message['jid'])
+                        t = threading.Thread(
+                            target=mastodon_reblog_fav_status_process,
+                            args=('r', message['jid'], message_id),
+                            name='mastodon_reblog_' + message['jid'])
                         t.start()
                         # MTHREADS.append(t)
                     elif answer.lower() == 'f':  # favourite status
-                        t = threading.Thread(target=mastodon_reblog_fav_status_process, args=('f', message['jid'],message_id), name='mastodon_favourite_'+message['jid'])
+                        t = threading.Thread(
+                            target=mastodon_reblog_fav_status_process,
+                            args=('f', message['jid'], message_id),
+                            name='mastodon_favourite_' + message['jid'])
                         t.start()
                         # MTHREADS.append(t)
                     else:
@@ -682,8 +704,7 @@ def process_xmpp_thread(message):
                 'Post answer to desired status\n\n' +
                 '> quotation\n' +
                 'f\n' +
-                'favourite quoted post\n'
-                ,
+                'favourite quoted post\n',
                 mfrom=str(mid) + '@' + HOST,
                 mtype='chat')
             msg.send()
@@ -696,10 +717,12 @@ def process_xmpp_config(message):
         body = body.lower()
         if body.startswith('server '):
             server = re.sub(r'server\W+', '', body)
-            t = threading.Thread(target=mastodon_register_process, args=(server,message['jid']), name='mastodon_'+server)
+            t = threading.Thread(
+                target=mastodon_register_process,
+                args=(server, message['jid']),
+                name='mastodon_' + server)
             t.start()
             # MTHREADS.append(t)
-                
         else:
             msg = XMPP.make_message(
                 message['jid'],
@@ -719,10 +742,12 @@ def process_xmpp_config(message):
             print("User in registration")
             m = mastodon_listeners.get(message['jid'])
             print("checking token with server", user['mid'])
-            t = threading.Thread(target=mastodon_register_finish_process, args=(message['jid'],code), name='mastodon_'+message['jid'])
+            t = threading.Thread(
+                target=mastodon_register_finish_process,
+                args=(message['jid'], code),
+                name='mastodon_' + message['jid'])
             t.start()
             # MTHREADS.append(t)
-            
         else:
             body = body.lower()
             if body.startswith('server '):
@@ -792,7 +817,7 @@ def process_xmpp_config(message):
                 except (KeyError, AttributeError):
                     m = MastodonUser(user.get('mid'), user.get('token'))
                     m.add_jids([user['jid']])
-                    if(m.create_listener(update_queue, notification_queue)):
+                    if (m.create_listener(update_queue, notification_queue)):
                         mastodon_listeners[user.get('mid')] = m
                 msg = XMPP.make_message(
                     message['jid'],
@@ -820,13 +845,13 @@ def process_xmpp_config(message):
                     print('autoboost')
                     accts = re.sub(r'(autoboost|ab)(\W+)?', '', body, re.I)
                     print(accts)
-                    l = users_db.getAutoboostByJid(message['jid'])
-                    print(l)
+                    line = users_db.getAutoboostByJid(message['jid'])
+                    print(line)
                     if not accts:
                         msg = XMPP.make_message(
                             message['jid'],
                             "autobust is enabled for the following accounts:\n" +
-                            "\n".join(l),
+                            "\n".join(line),
                             mfrom='config@' + HOST,
                             mtype='chat')
                         msg.send()
@@ -838,18 +863,18 @@ def process_xmpp_config(message):
                         for a in q.groups():
                             a = '@' + a
                             print(a)
-                            if a not in l:
+                            if a not in line:
                                 if a:
                                     users_db.addAutoboostToJid(a, message['jid'])
                             else:
                                 print("going to delete " + str(a))
                                 if a:
                                     users_db.delAutoboostByJid(a, message['jid'])
-                    l = users_db.getAutoboostByJid(message['jid'])
+                    line = users_db.getAutoboostByJid(message['jid'])
                     msg = XMPP.make_message(
                         message['jid'],
                         "autobust is enabled for the following accounts:\n" +
-                        "\n".join(l),
+                        "\n".join(line),
                         mfrom='config@' + HOST,
                         mtype='chat')
                     msg.send()
@@ -883,8 +908,8 @@ def process_xmpp_config(message):
                     mtype='chat')
                 msg.send()
             elif body == 'users' and user['jid'] == ADMIN_JID:
-                message_text=''
-                for k,v in mastodon_listeners.items():
+                message_text = ''
+                for k, v in mastodon_listeners.items():
                     if v.stream and v.stream.is_alive():
                         message_text = message_text + k + '\n'
                 msg = XMPP.make_message(
@@ -943,8 +968,6 @@ async def process_xmpp(event):
                     print("writing in group " + _group)
                     message['body'] = _group + ' ' + message['body']
                     process_xmpp_new(message)
-
-
             else:  # It's a command
                 command = message.get('command')
                 user = users_db.get_user_by_jid(message['jid'])
@@ -985,7 +1008,6 @@ async def process_xmpp(event):
             msg.send()
         except Empty:
             await asyncio.sleep(.2)
-            
         except Exception as e:
             print(str(e))
             msg = XMPP.make_message(
@@ -994,8 +1016,7 @@ async def process_xmpp(event):
                 mtype='chat',
                 mfrom=message['to'])
             msg.send()
-    print(asyncio.current_task().get_name(),
-        'is closed')
+    print(asyncio.current_task().get_name(), 'is closed')
 
 
 async def check_timeout(event):
@@ -1016,22 +1037,22 @@ async def check_timeout(event):
                     mtype='chat',
                     mfrom='alerts@' + HOST)
                 msg.send()
-                #XMPP.disconnect()
+                # XMPP.disconnect()
             except Exception as e:
                 print(e)
         await asyncio.sleep(2)
-    print(asyncio.current_task().get_name(),
-        'is closed')
+    print(asyncio.current_task().get_name(), 'is closed')
 
 
 def disconnected(s):
     print("disconnected: " + str(s))
     exit(1)
 
+
 def process_process():
     while RUN:
-        for k,v in mastodon_listeners.items():
-            if v.stream and ( not v.stream.is_alive() ):
+        for k, v in mastodon_listeners.items():
+            if v.stream and (not v.stream.is_alive()):
                 print("I see a stream is not alive")
                 sleep(2)
                 v.create_listener(update_queue, notification_queue)
@@ -1040,19 +1061,21 @@ def process_process():
     XMPP.disconnect()
     print('process_process is closed')
 
+
 def mastodon_processor(login, v):
     print("mastodon processor")
     print(threading.current_thread().name)
     global mastodon_listeners
     m = MastodonUser(login, v.get('token'))
     m.add_jids(v.get('jids'))
-    if(m.create_listener(update_queue, notification_queue)):
+    if (m.create_listener(update_queue, notification_queue)):
         mastodon_listeners[login] = m
     print("Full list of listeners:")
     for k, v in mastodon_listeners.items():
         print("\t", k, end=':')
         print(v.jids)
     print('===')
+
 
 def mastodon_register_process(server, jid):
     try:
@@ -1091,6 +1114,7 @@ def mastodon_register_process(server, jid):
             mtype='chat')
     msg.send()
 
+
 def mastodon_register_finish_process(jid, code):
     m = mastodon_listeners.get(jid)
     token = m.finish_register(code)
@@ -1098,7 +1122,7 @@ def mastodon_register_finish_process(jid, code):
         res = m.verify_account()
     else:
         msg = XMPP.make_message(
-            message['jid'],
+            jid,
             'Token is invalid. Please check the token',
             mfrom='config@' + HOST,
             mtype='chat')
@@ -1122,7 +1146,7 @@ def mastodon_register_finish_process(jid, code):
                 pass
             m.add_jids([user['jid']])
             m.update_mid(mid)
-            if(m.create_listener(update_queue, notification_queue)):
+            if (m.create_listener(update_queue, notification_queue)):
                 mastodon_listeners[mid] = m
         msg = XMPP.make_message(
             jid,
@@ -1140,24 +1164,25 @@ def mastodon_register_finish_process(jid, code):
             mtype='chat')
         msg.send()
 
+
 def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
     users_db = db.Db(USERS_DB)
-    #user = users_db.get_user_by_jid(jid)
-    #user = users.getUsersByMid(mid)[0]
-    #if not user:
+    # user = users_db.get_user_by_jid(jid)
+    # user = users.getUsersByMid(mid)[0]
+    # if not user:
     #    return
     mastodon = mastodon_listeners.get(mid)
-    #message_store = MessageStore(MESSAGES_DB)
-    #message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    # message_store = MessageStore(MESSAGES_DB)
+    # message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
     message_store = getMessageStore()
     if not mastodon:
         return
     _m = message
-    if tp == 'update': 
+    if tp == 'update':
         print("update")
         print("mid:", mid)
         print("type", _m.type)
-        if _m.type == 'mention': # we will receive it via notification again
+        if _m.type == 'mention':  # we will receive it via notification again
             print("Not for update handler. Returning")
             return
         if mid in _m.mentions:
@@ -1200,8 +1225,7 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
         # message_store.update_mentions(first_message.id,_m.mentions)
         # mentions_str = stored_message['mentions']
         # mentions = set(mentions_str.split(' '))
-        mentions = _m.mentions
-        if '@' + mid in _m.mentions or ((stored_message['mentions'].split(' '))[0] == '@'+mid):
+        if '@' + mid in _m.mentions or ((stored_message['mentions'].split(' '))[0] == '@' + mid):
             print("answer to known message")
             for j in mastodon.jids:
                 msg = XMPP.make_message(j,
@@ -1210,26 +1234,28 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                                         mtype='chat')
                 msg.send()
             message_store.add_message(
-                    _m.text,
-                    _m.url,
-                    _m.from_mid,
-                    _m.mentions,
-                    _m.visibility,
-                    _m.id,
-                    mid,
-                    _m.date,
-                    first_message.id
-                )
+                _m.text,
+                _m.url,
+                _m.from_mid,
+                _m.mentions,
+                _m.visibility,
+                _m.id,
+                mid,
+                _m.date,
+                first_message.id
+            )
         else:
             print("unknown message. Not to me")
             for j in mastodon.jids:
                 # check if user has disabled replies receiving
                 u = users_db.get_user_by_jid(j)
                 if (u and u['receive_replies'] == '1') or tp == 'notification':
-                    msg = XMPP.make_message(j,
-                                            _m.text,
-                                            mfrom='home@' + HOST,
-                                            mtype='chat')
+                    msg = XMPP.make_message(
+                        j,
+                        _m.text,
+                        mfrom='home@' + HOST,
+                        mtype='chat'
+                    )
                     msg.send()
                     message_store.add_message(
                         _m.text,
@@ -1250,20 +1276,20 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
             for j in mastodon.jids:
                 msg = XMPP.make_message(j,
                                         _m.text,
-                                        mfrom= str(thread_id) + '@' + HOST,
+                                        mfrom=str(thread_id) + '@' + HOST,
                                         mtype='chat')
                 msg.send()
             message_store.add_message(
-                    _m.text,
-                    _m.url,
-                    _m.from_mid,
-                    _m.mentions,
-                    _m.visibility,
-                    _m.id,
-                    mid,
-                    _m.date,
-                    thread_id
-                )
+                _m.text,
+                _m.url,
+                _m.from_mid,
+                _m.mentions,
+                _m.visibility,
+                _m.id,
+                mid,
+                _m.date,
+                thread_id
+            )
         else:
             for j in mastodon.jids:
                 # check if user has disabled replies receiving
@@ -1284,7 +1310,8 @@ def _mastodon_process_reply_process(mid, mes_x, message, tp='update'):
                         mid,
                         _m.date
                     )
-    
+
+
 def mastodon_get_thread_process(jid, mes_x):
     users_db = db.Db(USERS_DB)
     user = users_db.get_user_by_jid(jid)
@@ -1321,7 +1348,7 @@ def mastodon_get_thread_process(jid, mes_x):
     message_store = getMessageStore()
     for _m in thread_messages:
         print(_m.to_dict())
-        #_m.mentions.remove(_m.from_mid)
+        # _m.mentions.remove(_m.from_mid)
         message_store.add_message(
             _m.text,
             _m.url,
@@ -1339,7 +1366,8 @@ def mastodon_get_thread_process(jid, mes_x):
             mtype='chat',
             mfrom=str(thread_messages[0].id) + '@' + HOST)
         msg.send()
-        
+
+
 def mastodon_post_status_process(jid, in_reply_to_id, status, visibility):
     users_db = db.Db(USERS_DB)
     user = users_db.get_user_by_jid(jid)
@@ -1351,16 +1379,15 @@ def mastodon_post_status_process(jid, in_reply_to_id, status, visibility):
     try:
         if in_reply_to_id:
             message_store = getMessageStore()
-            #message_store = SqliteStore(MESSAGES_DB)
-            #message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+            # message_store = SqliteStore(MESSAGES_DB)
+            # message_store = MessageStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
             last_message = message_store.get_message_by_id(in_reply_to_id)
-            mentions=[]
+            mentions = []
             if last_message:
-                feed = last_message.get('feed','home')
+                feed = last_message.get('feed', 'home')
                 mentions = last_message['mentions'].lower().split(' ')
                 print('last_messsage')
                 print(last_message)
-            author = ''
             try:
                 # author = mentions.pop(0) + ' '  # Space is matter!
                 # if author == '@' + user['mid'].lower():
@@ -1388,13 +1415,13 @@ def mastodon_post_status_process(jid, in_reply_to_id, status, visibility):
         print("error in main")
         print(jid)
         if in_reply_to_id:
-            feed = last_message.get('feed','new')
+            feed = last_message.get('feed', 'new')
             msg = XMPP.make_message(
                 jid,
                 "Cannot send post, network error.",
                 mtype='chat',
                 mfrom=feed + '@' + HOST)
-        else:    
+        else:
             msg = XMPP.make_message(
                 jid,
                 "Cannot send post, network error",
@@ -1408,7 +1435,8 @@ def mastodon_post_status_process(jid, in_reply_to_id, status, visibility):
             mtype='chat',
             mfrom='new' + '@' + HOST)
         msg.send()
-    
+
+
 def mastodon_reblog_fav_status_process(action, jid, mes_x):
     users_db = db.Db(USERS_DB)
     user = users_db.get_user_by_jid(jid)
@@ -1441,9 +1469,10 @@ def mastodon_reblog_fav_status_process(action, jid, mes_x):
             mtype='chat',
             mfrom='home@' + HOST)
         msg.send()
-        
+
+
 if __name__ == '__main__':
-#def xmpp_processor(xmpp_queue):
+    # def xmpp_processor(xmpp_queue):
     xmpp_queue = Queue()
     users_db = db.Db(USERS_DB)
     # message_store = MessageStore(MESSAGES_DB)
@@ -1457,8 +1486,7 @@ if __name__ == '__main__':
     XMPP.add_users(users)
     XMPP.attach_queue(xmpp_queue)
     XMPP.connected_event = asyncio.Event()
-    callback = lambda _: XMPP.connected_event.set()
-    XMPP.add_event_handler('session_start', callback)
+    XMPP.add_event_handler('session_start', lambda _: XMPP.connected_event.set())
     XMPP.add_event_handler('session_start', process_update)
     XMPP.add_event_handler('session_start', process_xmpp)
     XMPP.add_event_handler('session_start', process_notification)
@@ -1476,8 +1504,10 @@ if __name__ == '__main__':
     print(users)
     USER_LIST = get_uniq_mids(users)
     for k, v in USER_LIST.items():
-        #mastodon_processor(k,v)
-        t = threading.Thread(target=mastodon_processor, args=(k, v), name='mastodon_listener_'+str(k))
+        t = threading.Thread(
+            target=mastodon_processor,
+            args=(k, v),
+            name='mastodon_listener_' + str(k))
         t.start()
         MTHREADS.append(t)
     XMPP.connect()
@@ -1486,14 +1516,5 @@ if __name__ == '__main__':
     t = threading.Thread(target=process_process, name="process_process")
     t.start()
     MTHREADS.append(t)
-    #try:
     loop.run_until_complete(XMPP.disconnected)
     print("end loop")
-    #finally:
-        #loop.stop()
-        #asyncio.set_event_loop(None)
-    #XMPP.process()
-
-# if __name__ == '__main__':
-#     xmpp_t = threading.Thread(target=xmpp_processor, args=(xmpp_queue,), name='xmpp')
-#     xmpp_t.start()

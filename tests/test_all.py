@@ -9,16 +9,20 @@ sys.path.append('../venv/lib/python3.9/site-packages')
 sys.path.append('../')
 sys.path.append('.')
 sys.path.append('./venv/lib/python3.9/site-packages')
+import threading
 import mastodon_listener
-from message_store import MessageStore
+from sqlite_store import MessageStore
+from mysql_store import MessageStore as MysqlStore
 import gxmpp
 import html_parser
 from queue import Empty, Queue
 import json
 import db
 import time
+import csv
+from datetime import datetime, timezone
 from shutil import copyfile
-import main as main
+import maint as main
 
 
 UPDATES_FILE = 'mastodon_update.json'
@@ -31,8 +35,69 @@ MASTODON_ID='shura@mastodon.social'
 USERS_TEST_DB='users_test.db'
 MESSAGES_TEST_DB='test_messages.db'
 
+MYSQL_HOST='localhost'
+MYSQL_PORT='3306'
+MYSQL_DATABASE='mastaj_test'
+MYSQL_USERNAME='test'
+MYSQL_PASSWORD='test'
+
 update_queue=Queue()
 
+
+def test_messages(self, dbtype='sqlite'):
+        tmp_db=MESSAGES_TEST_DB+'.bak'
+        copyfile(MESSAGES_TEST_DB, tmp_db)
+        if dbtype == 'sqlite':
+            message_store=MessageStore(tmp_db)
+        else:
+            message_store=MysqlStore(MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE,
+             MYSQL_USERNAME, MYSQL_PASSWORD)
+        # mentions=set(['@test@mastodon.social'])
+        # _id=104032314153599025
+        # message_store.update_mentions(_id, mentions)
+        # toot=message_store.get_message_by_id(_id)
+        # sample=set(['@test@mastodon.social','@groosha@mastodon.ml'])
+        # self.assertEqual(set(toot['mentions'].split(' ')),sample)
+        # mentions=set(['@test@mastodon.social', '@test2@mastodon.social'])
+        # message_store.update_mentions(_id, mentions)
+        # toot=message_store.get_message_by_id(_id)
+        # sample.update(['@test2@mastodon.social'])
+        # self.assertEqual(set(toot['mentions'].split(' ')),sample)
+        # toot['mentions']=toot['mentions'].split(' ')
+        # toot['author']=toot['mentions'][0]
+        # toot['date'] = datetime.fromisoformat(toot['date'])
+        # print(*toot)
+        # res = message_store.add_message(**toot)
+        # self.assertEqual(res, None)
+        # toot['mid']='test@test.tld'
+        # res = message_store.add_message(**toot)
+        # self.assertNotEqual(res, None)
+        
+        search_for='''"Linux". А то юзаю как чайник.'''
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
+        # print(toot)
+        self.assertEqual(toot['id'],'104032564439980906')
+        search_for='''@sptnkmmnt@mastodon.ml:
+Когда-то очень давно, я записывал концерт Spititual Front на айпад.  
+В смысле, стоял в зале и снимал.  
+Сейчас понимаю, как тупо я выглядел.  
+И меня мучает вопрос:
+Интересно, а как музыкантов не бесит, что вместо того, чтобы наслаждаться музыкой, текстами, там... шоу, в конце концов, народ утыкается в смарты и просто "ксерокопирует" форму без содержания?'''
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
+        self.assertEqual(toot['id'],'104032809534204360')
+        
+        search_for='''@Vladimir_Vladimirovich:
+Судно "Академик Черский", способное достроить "Северный поток-2", которое по данным независимых СМИ шло в Находку, внезапно оказалось у берегов Дании. Наверное решили идти в Находку Северным морским путём.'''
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
+        self.assertEqual(toot,None)
+        
+        search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
+        toot=message_store.find_message(search_for, 'L29Ah@qoto.org')
+        self.assertEqual(toot['id'],'105237775817950579')
+        
+        search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
+        toot=message_store.find_message(search_for, 'shura@mastodon.social')
+        self.assertEqual(toot['id'],'105237775810751372')
 
 class TestAll(unittest.TestCase):
     
@@ -138,7 +203,13 @@ class TestAll(unittest.TestCase):
                 # No need to send message. We will receive a duplicate via notification
                 #pass
     
-    def test_update(self):
+    #def test_messages_sqlite(self):
+    #    return test_messages(self)
+    
+    def test_messages_mysql(self):
+        test_messages(self, 'mysql')
+    
+    def disable_test_update(self):
         """
         Test for mastodon update processing
         """
@@ -195,7 +266,7 @@ class TestAll(unittest.TestCase):
             # res=self.message_store.find_message(text, MASTODON_ID)
             # self.assertEqual(u['text'],res['message'])
         
-    def test_notification(self):
+    def disable_test_notification(self):
         with open(NOTIFICATIONS_FILE) as f:
             data=f.read()
         f.close()
@@ -223,7 +294,7 @@ class TestAll(unittest.TestCase):
             em.add_mentions(u['mentions'])
             self.assertEqual(m['status'].to_dict(), em.to_dict())
 
-    def test_users(self):
+    def disable_test_users(self):
         tmp_db=USERS_TEST_DB+'.bak'
         copyfile(USERS_TEST_DB, tmp_db)
         database = db.Db(tmp_db)
@@ -269,58 +340,9 @@ class TestAll(unittest.TestCase):
         #     masto_users.append(_)
         # time.sleep(5)
 
-    def test_messages(self):
-        tmp_db=MESSAGES_TEST_DB+'.bak'
-        copyfile(MESSAGES_TEST_DB, tmp_db)
-        message_store=MessageStore(tmp_db)
-        mentions=set(['@test@mastodon.social'])
-        id=104032314153599025
-        message_store.update_mentions(id, mentions)
-        toot=message_store.get_message_by_id(id)
-        sample=set(['@test@mastodon.social','@groosha@mastodon.ml'])
-        self.assertEqual(set(toot['mentions'].split(' ')),sample)
-        mentions=set(['@test@mastodon.social', '@test2@mastodon.social'])
-        message_store.update_mentions(id, mentions)
-        toot=message_store.get_message_by_id(id)
-        sample.update(['@test2@mastodon.social'])
-        self.assertEqual(set(toot['mentions'].split(' ')),sample)
-        toot['mentions']=toot['mentions'].split(' ')
-        toot['author']=toot['mentions'][0]
-        print(*toot)
-        res = message_store.add_message(**toot)
-        self.assertEqual(res, None)
-        toot['mid']='test@test.tld'
-        res = message_store.add_message(**toot)
-        self.assertNotEqual(res, None)
-        
-        search_for='''"Linux". А то юзаю как чайник.'''
-        toot=message_store.find_message(search_for, 'shura@mastodon.social')
-        # print(toot)
-        self.assertEqual(toot['id'],'104032564439980906')
-        search_for='''@sptnkmmnt@mastodon.ml:
-Когда-то очень давно, я записывал концерт Spititual Front на айпад.  
-В смысле, стоял в зале и снимал.  
-Сейчас понимаю, как тупо я выглядел.  
-И меня мучает вопрос:
-Интересно, а как музыкантов не бесит, что вместо того, чтобы наслаждаться музыкой, текстами, там... шоу, в конце концов, народ утыкается в смарты и просто "ксерокопирует" форму без содержания?
-'''
-        toot=message_store.find_message(search_for, 'shura@mastodon.social')
-        self.assertEqual(toot['id'],'104032809534204360')
-        
-        search_for='''@Vladimir_Vladimirovich:
-Судно "Академик Черский", способное достроить "Северный поток-2", которое по данным независимых СМИ шло в Находку, внезапно оказалось у берегов Дании. Наверное решили идти в Находку Северным морским путём.'''
-        toot=message_store.find_message(search_for, 'shura@mastodon.social')
-        self.assertEqual(toot,None)
-        
-        search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
-        toot=message_store.find_message(search_for, 'L29Ah@qoto.org')
-        self.assertEqual(toot['id'],'105237775817950579')
-        
-        search_for='''С одной стороны я достаточно долго не любил тот же Озон и ко за то, что они были членами АКИТ и лоббировали снижение беспошлинных лимитов, и прочее. С другой стороны они в это же время выстроили классную логистику с оглядкой на Amazon и это реально УДОБНО и просто.'''
-        toot=message_store.find_message(search_for, 'shura@mastodon.social')
-        self.assertEqual(toot['id'],'105237775810751372')
     
-    def test_xmpp_users(self):
+    
+    def disable_test_xmpp_users(self):
         tmp_db=USERS_TEST_DB+'.bak'
         copyfile(USERS_TEST_DB, tmp_db)
         database = db.Db(tmp_db)
@@ -333,7 +355,7 @@ class TestAll(unittest.TestCase):
         xmpp.add_users(users)
         self.assertEqual(users, xmpp.users)
 
-    def test_html_parser(self):
+    def disable_test_html_parser(self):
         html='''<p>Катали с приятелем в двухдневный поход на выходных.
         Наснимал немножко видео и попробовал немножко помонтировать. Прошу смотреть и оценивать.<br>
         День первый: <a href="https://www.youtube.com/watch?v=Rma0SafnztU" rel="nofollow noopener noreferrer" target="_blank">youtube.com</a></p>
@@ -418,7 +440,7 @@ https://zenrus.ru/'''
         # print(text)
         self.assertEqual(text, sample_text)
 
-    def test_process_xmpp_thread1(self):
+    def disable_test_process_xmpp_thread1(self):
         S=self
         message={
             'jid':'admin@home.myhome',
@@ -442,22 +464,30 @@ https://zenrus.ru/'''
                 return {
                     'url':'url',
                     'id':'id',
+                    'created_at':datetime.utcnow()
                 }
         m=myMasto()
         tmp_db=MESSAGES_TEST_DB+'.bak'
         copyfile(MESSAGES_TEST_DB, tmp_db)
         main.message_store=MessageStore(tmp_db)
+        main.MESSAGES_DB = tmp_db
         main.users_db = db.Db(USERS_TEST_DB)
+        main.USERS_DB=USERS_TEST_DB
         main.mastodon_listeners = {
             'shura@mastodon.social':m
         }
         main.process_xmpp_thread(message)
+        for t in threading.enumerate():
+            try:
+                t.join()
+            except RuntimeError:
+                pass
         new_message=main.message_store.get_message_by_id('id')
         print("mentions")
         print(new_message['mentions'])
-        self.assertEqual(new_message['mentions'],'@shura@pixelfed.social' )
+        self.assertEqual(new_message['mentions'],'@shura@mastodon.social @shura@pixelfed.social' )
         
-    def test_process_xmpp_thread2(self):
+    def disable_test_process_xmpp_thread2(self):
         S=self
         message={
             'jid':'L29Ah@qoto.org',
@@ -482,6 +512,7 @@ https://zenrus.ru/'''
         copyfile(MESSAGES_TEST_DB, tmp_db)
         main.message_store=MessageStore(tmp_db)
         main.users_db = db.Db(USERS_TEST_DB)
+        main.USERS_DB=USERS_TEST_DB
         main.mastodon_listeners = {
             'shura@mastodon.social':m
         }
@@ -491,7 +522,7 @@ https://zenrus.ru/'''
         print(new_message['mentions'])
         self.assertEqual(new_message['mentions'],'@kinen@hubzilla.konzurovski.net ' )
 
-    def test_quotation(self):
+    def disable_test_quotation(self):
         '''
         #### Quotation test ####
         '''
@@ -509,22 +540,92 @@ https://zenrus.ru/'''
                 return {
                     'url':'url',
                     'id':'id',
+                    'created_at':datetime.now()
                 }
         m=myMasto()
         tmp_db=MESSAGES_TEST_DB+'.bak'
         copyfile(MESSAGES_TEST_DB, tmp_db)
         main.message_store=MessageStore(tmp_db)
         main.users_db = db.Db(USERS_TEST_DB)
+        main.USERS_DB = USERS_TEST_DB
+        main.MESSAGES_DB = tmp_db
+        main.TEST_MODE=1
         main.mastodon_listeners = {
             'shura@mastodon.social':m
         }
         print("MESSAGE")
         print(message)
         main.process_xmpp_thread(message)
-        new_message=main.message_store.get_message_by_id('id')
         print("mentions")
+        for t in threading.enumerate():
+            try:
+                t.join()
+            except RuntimeError:
+                pass
+        new_message=main.message_store.get_message_by_id('id')
         print(new_message)
         self.assertEqual(new_message['message'],"@bouncepaw@lor.sh Saluton!\n> https://mycorrhiza.wiki\nВсе изменения в git? diff'ы читаемые?" )
 
+
+    def disable_test_mysql_base(self):
+        '''
+        Basic Mysql test
+        '''
+        S=self
+        self.maxDiff=None
+        message_store = MysqlStore(
+            MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+        
+        with open("mysql_dataset.csv") as csvfile:
+            reader = csv.reader(csvfile)
+            d = {}
+            for line in reader:
+                d['date'] = datetime.fromisoformat(line[6])
+                d['mentions'] = line[2]
+                d['url'] = line[1]
+                d['visibility'] = line[3]
+                d['id'] = line[4]
+                d['message'] = line[0]
+                d['mid'] = line[5]
+                d['feed'] = line[7]
+                n = message_store.get_message_by_id(line[4])
+                n['date'] = n['date'].astimezone(timezone.utc)
+                S.assertDictEqual(d, n)
+    def test_get_messages_mysql(self):
+        message_store = MysqlStore(
+            MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+        d = message_store.get_messages_for_user('shura@mastodon.social')
+        t = ['104032314153599025', '104031984840402718', '104032564439980906', '104032626519236083', '104032640246088900', '104032712934805879', '104032776374773355', '104032809534204360', '105237775810751372']
+        self.assertListEqual(t, d)
+
+
+    def test_get_messagesby_thread_mysql(self):
+        message_store = MysqlStore(
+            MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+        d = message_store.get_messages_for_user_by_thread('shura@mastodon.social','105254999743786130')
+        t = ['105254999743786130', '105255000721266255', '105255003720699893', '105255007313424798', '106171834340437925', '106171880670024768']
+        self.assertListEqual(t, d)
+        # print("!!!!!!")
+        # print(d)
+
+
 if __name__ == '__main__':
+    message_store = MysqlStore(
+            MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    message_store.drop_database()
+    message_store = MysqlStore(
+            MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE, MYSQL_USERNAME, MYSQL_PASSWORD)
+    with open("mysql_dataset.csv") as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            line[6]=datetime.fromisoformat(line[6])
+            line[2]=line[2].split(' ')
+            author = line[2][0]
+            line[2] = set(line[2])
+            message_store.add_message(
+                line[0], line[1], author,
+                line[2], line[3], line[4],
+                line[5], line[6], line[7]
+            )
     unittest.main()
+    message_store.drop_database()

@@ -1,8 +1,4 @@
-#import asyncio
-
 from slixmpp.componentxmpp import ComponentXMPP
-from slixmpp.basexmpp import BaseXMPP
-from queue import Queue
 import re
 
 
@@ -82,7 +78,7 @@ class Component(ComponentXMPP):
                     "Type 'help' for help\n" +
                     "Please enter your mastodon server name with command 'server'. For example:\n" +
                     'server mastodon.social',
-                    mfrom="config@"+self.jid,
+                    mfrom="config@" + self.jid,
                     mtype='chat')
                 self.send_presence(pto=presence.get('from'),
                                    pfrom='config@' + self.jid,
@@ -127,13 +123,13 @@ class Component(ComponentXMPP):
             jid,
             "Please add this contact to your roster. Write here to make new post",
             'For new posts',
-            mfrom="new@"+self.jid,
+            mfrom="new@" + self.jid,
             mtype='chat')
         self.send_message(
             jid,
             "Please add this contact to your roster. You will receive here your home feed",
             'Your home feed',
-            mfrom="home@"+self.jid,
+            mfrom="home@" + self.jid,
             mtype='chat')
 
     def _connection_failed(self, err):

@@ -3,7 +3,6 @@
 
 
 import sqlite3
-from datetime import datetime
 import re
 
 
@@ -84,17 +83,16 @@ class MessageStore:
     def find_message(self, text, mid, feed='home'):
         # text=re.sub(r'([^"])"',r'\1""',text)
         text = re.sub(r'"', r'""', text)
-        print("Search for '"+text+"'")
-        text = 'message:"'+text+'" mid:"' + \
+        print("Search for '" + text + "'")
+        text = 'message:"' + text + '" mid:"' + \
             str(mid) + '" feed:"' + str(feed) + '"'
         sql = "SELECT * FROM 'Messages' WHERE Messages MATCH (?) ORDER BY 'date' DESC"
-        res = self.cursor.execute(sql, [text])
+        self.cursor.execute(sql, [text])
         a = self.cursor.fetchall()
         if a:
             return a[-1]
         return None
 
-    
     def get_message_by_id(self, id: str):
         sql = "SELECT * FROM 'Messages' WHERE id = (?)"
         self.cursor.execute(sql, [str(id)])

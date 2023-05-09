@@ -8,13 +8,9 @@ from mastodon import Mastodon, StreamListener,\
 from requests import exceptions
 
 # import time
-from queue import Empty
-from multiprocessing import Queue
 import re
 # import mq
-import db
 # import numpy as np
-import json
 import html_parser
 import config
 from time import time
@@ -27,7 +23,7 @@ TIMEOUT = 30
 def log(text: str):
     if config.LOGGING:
         with open(LOG_FILE, 'a') as f:
-            f.write(text+'\n')
+            f.write(text + '\n')
 
 
 class NotFoundError(MastodonNotFoundError):
@@ -108,10 +104,10 @@ class MastodonListener(StreamListener):
             cont = data['reblog']
             # acct = data['account']['acct']
             # if not '@' in acct:
-                # acct = acct+'@'+self.server_name
+            # acct = acct+'@'+self.server_name
             acct = cont['account']['acct']
-            if not '@' in acct:
-                acct = acct+'@'+self.server_name
+            if '@' not in acct:
+                acct = acct + '@' + self.server_name
             m.from_mid = '@' + acct
             # m.add_mentions("@" + acct)
             to_out = "@{} reblog status of @{}:\n".format(
@@ -120,8 +116,8 @@ class MastodonListener(StreamListener):
         else:
             cont = data
             acct = data['account']['acct']
-            if not '@' in acct:
-                acct = acct+'@'+self.server_name
+            if '@' not in acct:
+                acct = acct + '@' + self.server_name
             m.from_mid = '@' + acct
             # m.add_mentions("@" + acct)
             to_out = ''
@@ -141,14 +137,14 @@ class MastodonListener(StreamListener):
             parser.feed(cont['spoiler_text'])
             parser.close()
             text = parser.get_result()
-            to_out = "Spoiler text: "+text+"\n"+to_out
+            to_out = "Spoiler text: " + text + "\n" + to_out
         media_list = cont.get('media_attachments')
         for u in media_list:
             to_out += "\n" + u['url']
         mentions = cont.get('mentions')
         for a in mentions:
-            if not '@' in a['acct']:
-                a['acct'] += '@'+self.server_name
+            if '@' not in a['acct']:
+                a['acct'] += '@' + self.server_name
             m.add_mentions("@" + a['acct'])
         m.url = cont['url']
         m.visibility = cont['visibility']
@@ -160,7 +156,7 @@ class MastodonListener(StreamListener):
             m.in_reply_to_id = cont['in_reply_to_id']
         # return m
         # self.update_q.put({'mid': self.mid, 'status': m})
-        s = re.sub(r"\s+\n","\n", m.text).rstrip()
+        s = re.sub(r"\s+\n", "\n", m.text).rstrip()
         m.text = s
         self.lastbeat = int(time())
         return m
@@ -176,7 +172,7 @@ class MastodonListener(StreamListener):
         m.type = data.get('type')
         to_out = ''
         m.from_mid = data['account']['acct']
-        if not '@' in m.from_mid:
+        if '@' not in m.from_mid:
             m.from_mid = '@' + m.from_mid + '@' + self.server_name
         if data['type'] == 'follow':
             to_out = "@{} follows you\n{}".format(
@@ -231,15 +227,15 @@ class MastodonListener(StreamListener):
             m.id = data['status']['id']
             acct = data['account']['acct']
             m.in_reply_to_id = data['status']['in_reply_to_id']
-            if not '@' in acct:
-                acct = acct+'@'+self.server_name
+            if '@' not in acct:
+                acct = acct + '@' + self.server_name
             m.add_mentions("@" + acct)
             m.url = data['status']['url']
             m.visibility = data['status']['visibility']
             mentions = data['status']['mentions']
             for a in mentions:
-                if not '@' in a['acct']:
-                    a['acct'] += '@'+self.server_name
+                if '@' not in a['acct']:
+                    a['acct'] += '@' + self.server_name
                 m.add_mentions('@' + a['acct'])
             text = parser.get_result()
             to_out = "@{}:{}".format(
@@ -253,7 +249,7 @@ class MastodonListener(StreamListener):
                 data['account']['acct'],
                 data['account']['url'])
 
-        m.text = re.sub(r"\s+\n","\n", to_out).rstrip()
+        m.text = re.sub(r"\s+\n", "\n", to_out).rstrip()
         return m
         # self.message_q.put({'mid': self.mid, 'status': m})
 
@@ -289,7 +285,7 @@ class MastodonUser:
             except MastodonNetworkError as e:
                 print(str(e))
                 raise NetworkError()
-            except Error as e:
+            except Exception as e:
                 print("Other connection to mastodon error")
                 print(str(e))
         self.jids = set()
@@ -299,7 +295,7 @@ class MastodonUser:
             # print(type(self.stream))
             self.stream.close()
             self.stream = None
-            print("stream for "+self.mastodon_id+" closed")
+            print("stream for " + self.mastodon_id + " closed")
 
     def update_mid(self, mid):
         self.mastodon_id = mid
@@ -310,7 +306,7 @@ class MastodonUser:
     def remove_jid(self, jid):
         try:
             self.jids.remove(jid)
-        except:
+        except Exception:
             pass
 
     def create_listener(self, update_queue=0, notification_queue=0):
@@ -362,7 +358,6 @@ class MastodonUser:
             toot = self.mastodon.status(message_id)
             thread = self.mastodon.status_context(message_id)
             mentions = set()
-            start_id = message_id
         except (MastodonNetworkError, exceptions.ConnectionError):
             print("network error for " + str(self.mastodon_id))
             raise NetworkError()
@@ -375,9 +370,6 @@ class MastodonUser:
             print(e)
             return []
         if len(thread['ancestors']) > 0:
-            start_id = thread['ancestors'][0]['id']
-            start_message = self.listener.process_update(
-                thread['ancestors'][0])
             for t in thread['ancestors']:
                 aa = self.listener.process_update(t)
                 mentions.update(aa.mentions)
@@ -399,12 +391,12 @@ class MastodonUser:
         try:
             (id, secret) = Mastodon.create_app(
                 client_name='mastaj xmpp gateway',
-                api_base_url="https://"+server
+                api_base_url="https://" + server
             )
             m = Mastodon(
                 client_id=id,
                 client_secret=secret,
-                api_base_url="https://"+server
+                api_base_url="https://" + server
             )
             url = m.auth_request_url(
                 client_id=id,

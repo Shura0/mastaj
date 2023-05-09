@@ -16,51 +16,51 @@ class Db:
         if filename:
             self.connect(filename)
 
-    def connect(self,filename=''):
+    def connect(self, filename=''):
         if filename:
-            self.filename=filename
+            self.filename = filename
 
         if self.filename == '':
             return 0
-        self.db=sqlite3.connect(self.filename)
-        self.db.row_factory= dict_factory
-        self.cursor=self.db.cursor()
+        self.db = sqlite3.connect(self.filename)
+        self.db.row_factory = dict_factory
+        self.cursor = self.db.cursor()
         self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Users'")
-        res=self.cursor.fetchall()
+        res = self.cursor.fetchall()
         if not res:
             self.cursor.execute('''CREATE TABLE 'Users'(
                         `jid` TEXT NOT NULL PRIMARY KEY,
                         `mid` TEXT NOT NULL,
                         `token` TEXT NOT NULL,
-                        `status`)''');
+                        `status`)''')
             self.db.commit()
         self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Autoboost'")
-        res=self.cursor.fetchall()
+        res = self.cursor.fetchall()
         if not res:
             self.cursor.execute('''CREATE TABLE 'Autoboost'(
                         `jid` TEXT NOT NULL,
-                        `mid` TEXT NOT NULL)''');
+                        `mid` TEXT NOT NULL)''')
             self.db.commit()
         # checking database version
         self.cursor.execute("PRAGMA table_info(Users)")
-        flag=1
-        res=self.cursor.fetchall()
+        flag = 1
+        res = self.cursor.fetchall()
         for r in res:
             if r['name'] == 'receive_replies':
-                flag=0
+                flag = 0
         if flag:
             print("Old version of users base... Upgrading")
             self.cursor.execute('ALTER TABLE Users ADD COLUMN receive_replies TEXT DEFAULT (1)')
-            res=self.db.commit()
+            res = self.db.commit()
 
-    def get_user_by_jid(self,jid):
+    def get_user_by_jid(self, jid):
         self.cursor.execute('SELECT * FROM "Users" WHERE jid = (?)', [jid])
-        res=self.cursor.fetchone()
+        res = self.cursor.fetchone()
         return res
 
-    def getUsersByMid(self,mid):
+    def getUsersByMid(self, mid):
         self.cursor.execute("SELECT * FROM 'Users' WHERE mid = (?) AND status != 'disabled'", [mid])
-        res=self.cursor.fetchall()
+        res = self.cursor.fetchall()
         return res
 
     def get_users(self):
@@ -69,54 +69,54 @@ class Db:
 
     def getTags(self):
         self.cursor.execute("SELECT tag FROM 'Tags'")
-        #todo: add uniq
+        # todo: add uniq
         return self.cursor.fetchall()
 
     def getSubscribersByTag(self, tag):
-        self.cursor.execute("SELECT * FROM Users INNER JOIN Tags USING (jid) WHERE Tags.tag = (?)",[tag,])
+        self.cursor.execute("SELECT * FROM Users INNER JOIN Tags USING (jid) WHERE Tags.tag = (?)", [tag,])
         return self.cursor.fetchall()
 
     def getTagsByJid(self, jid):
-        self.cursor.execute("SELECT tag FROM 'Tags' WHERE jid = (?)",[jid])
+        self.cursor.execute("SELECT tag FROM 'Tags' WHERE jid = (?)", [jid])
         return self.cursor.fetchall
 
     def add_user(self, jid, mid, token):
-        self.cursor.execute("SELECT jid FROM 'Users' WHERE jid = (?)",[jid])
-        res=self.cursor.fetchall()
+        self.cursor.execute("SELECT jid FROM 'Users' WHERE jid = (?)", [jid])
+        res = self.cursor.fetchall()
         if len(res) > 0:
-            print ("User is exist. Update base...")
-            res=self.cursor.execute("UPDATE 'Users' SET 'mid'=(?), 'token'=(?) WHERE jid = (?)",(mid,token,jid))
+            print("User is exist. Update base...")
+            res = self.cursor.execute("UPDATE 'Users' SET 'mid'=(?), 'token'=(?) WHERE jid = (?)", (mid, token, jid))
             self.db.commit()
             if res:
-                print ("OK\n")
+                print("OK\n")
                 return 1
             else:
                 return 0
-        res=self.cursor.execute("INSERT INTO 'Users' (jid, mid, token, status) VALUES (?,?,?,'registration')",(jid,mid,token))
+        res = self.cursor.execute("INSERT INTO 'Users' (jid, mid, token, status) VALUES (?,?,?,'registration')", (jid, mid, token))
         self.db.commit()
 
-    def addTagToJid(self,tag,jid):
-        self.cursor.execute("SELECT jid FROM 'Tags' WHERE tag = (?) AND jid = (?)",(tag,jid))
-        res=self.cursor.fetchall()
+    def addTagToJid(self, tag, jid):
+        self.cursor.execute("SELECT jid FROM 'Tags' WHERE tag = (?) AND jid = (?)", (tag, jid))
+        res = self.cursor.fetchall()
         if len(res) < 1:
-            self.cursor.execute("INSERT INTO 'Tags' (jid, tag) VALUES ( ?, ? )",(jid,tag))
+            self.cursor.execute("INSERT INTO 'Tags' (jid, tag) VALUES ( ?, ? )", (jid, tag))
             self.db.commit()
-        print("user: "+jid+" subscribed to #"+tag)
+        print("user: " + jid + " subscribed to #" + tag)
 
     def set_status_by_jid(self, jid, status):
         self.cursor.execute("UPDATE 'Users' SET `status`=(?) WHERE jid = (?)", (status, jid))
         self.db.commit()
-    
+
     def set_mid_by_jid(self, jid, mid):
         self.cursor.execute("UPDATE 'Users' SET `mid`=(?) WHERE jid = (?)", (mid, jid))
         self.db.commit()
-    
+
     def set_token_by_jid(self, jid, token):
         self.cursor.execute("UPDATE 'Users' SET `token`=(?) WHERE jid = (?)", (token, jid))
         self.db.commit()
 
     def del_user_by_jid(self, jid):
-        self.cursor.execute("DELETE FROM 'Users' WHERE jid = (?)",[jid])
+        self.cursor.execute("DELETE FROM 'Users' WHERE jid = (?)", [jid])
         self.db.commit()
 
     def delUserByMid(self, mid):
@@ -124,45 +124,44 @@ class Db:
         self.db.commit()
 
     def delTagByJid(self, tag, jid):
-        self.cursor.execute("DELETE FROM 'Tags' WHERE jid = (?) AND tag = (?)",(jid,tag))
+        self.cursor.execute("DELETE FROM 'Tags' WHERE jid = (?) AND tag = (?)", (jid, tag))
         self.db.commit()
 
     def addAutoboostToJid(self, mid, jid):
-        mid=mid.lower()
-        jid=jid.lower()
-        self.cursor.execute("SELECT jid FROM 'Autoboost' WHERE mid = (?) AND jid = (?)",(mid,jid))
-        res=self.cursor.fetchall()
+        mid = mid.lower()
+        jid = jid.lower()
+        self.cursor.execute("SELECT jid FROM 'Autoboost' WHERE mid = (?) AND jid = (?)", (mid, jid))
+        res = self.cursor.fetchall()
         if len(res) < 1:
-            self.cursor.execute("INSERT INTO 'Autoboost' (jid, mid) VALUES ( ?, ? )",(jid,mid))
+            self.cursor.execute("INSERT INTO 'Autoboost' (jid, mid) VALUES ( ?, ? )", (jid, mid))
             self.db.commit()
-        print("user "+mid+" added to autoboost")
+        print("user " + mid + " added to autoboost")
 
     def delAutoboostByJid(self, mid, jid):
-        mid=mid.lower()
-        jid=jid.lower()
-        self.cursor.execute("DELETE FROM 'Autoboost' WHERE jid = (?) AND mid = (?)",(jid,mid))
+        mid = mid.lower()
+        jid = jid.lower()
+        self.cursor.execute("DELETE FROM 'Autoboost' WHERE jid = (?) AND mid = (?)", (jid, mid))
         self.db.commit()
 
     def getAutoboostByJid(self, jid):
-        jid=jid.lower()
-        self.cursor.execute("SELECT * FROM 'Autoboost' WHERE jid = (?)",[jid])
-        a=self.cursor.fetchall()
-        b=[]
+        jid = jid.lower()
+        self.cursor.execute("SELECT * FROM 'Autoboost' WHERE jid = (?)", [jid])
+        a = self.cursor.fetchall()
+        b = []
         for i in a:
             b.append(i['mid'])
         return b
 
-    def getAutoboostByJidMid(self, jid,mid):
-        mid=mid.lower()
-        jid=jid.lower()
-        self.cursor.execute("SELECT * FROM 'Autoboost' WHERE mid = (?) AND jid = (?)",(mid,jid))
-        a=self.cursor.fetchall()
-        if a and a[0]: return a[0]
+    def getAutoboostByJidMid(self, jid, mid):
+        mid = mid.lower()
+        jid = jid.lower()
+        self.cursor.execute("SELECT * FROM 'Autoboost' WHERE mid = (?) AND jid = (?)", (mid, jid))
+        a = self.cursor.fetchall()
+        if a and a[0]:
+            return a[0]
         return None
 
     def set_receive_replies_by_mid(self, mid, val):
-        mid=mid.lower()
+        mid = mid.lower()
         self.cursor.execute("UPDATE 'Users' SET `receive_replies`=(?) WHERE mid = (?)", (val, mid))
         self.db.commit()
-        
-    
