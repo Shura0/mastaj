@@ -145,8 +145,8 @@ class MessageStore:
         # text = re.sub(r'"', r'""', text)
         print("Search for '" + text + "'")
         text = ("%" + text + "%")
-        sql = "SELECT * FROM Messages WHERE message LIKE %s AND mid = %s AND feed = %s ORDER BY 'date' DESC LIMIT 1"
-        print("SELECT * FROM Messages WHERE message LIKE {} AND mid = {} AND feed = {} ORDER BY 'date' DESC LIMIT 1".format(text, str(mid), str(feed)))
+        sql = "SELECT * FROM Messages WHERE message LIKE %s AND mid = %s AND feed = %s ORDER BY date DESC LIMIT 1"
+        print("SELECT * FROM Messages WHERE message LIKE {} AND mid = {} AND feed = {} ORDER BY date DESC LIMIT 1".format(text, str(mid), str(feed)))
         cursor = self.db.cursor(dictionary=True)
         cursor.execute(sql, (text, str(mid), str(feed)))
         res = cursor.fetchone()
